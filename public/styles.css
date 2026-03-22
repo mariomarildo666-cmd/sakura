@@ -1,11 +1,11 @@
 :root {
-  --panel: rgba(255, 250, 252, 0.8);
-  --panel-strong: rgba(255, 247, 251, 0.94);
-  --line: rgba(202, 136, 174, 0.18);
-  --line-strong: rgba(202, 136, 174, 0.3);
-  --text: #5c3950;
-  --muted: #9e7890;
-  --shadow: 0 30px 80px rgba(236, 162, 198, 0.22);
+  --panel: rgba(255, 252, 253, 0.82);
+  --panel-strong: rgba(255, 249, 251, 0.96);
+  --line: rgba(191, 124, 157, 0.18);
+  --line-strong: rgba(191, 124, 157, 0.34);
+  --text: #553449;
+  --muted: #9f758e;
+  --shadow: 0 30px 90px rgba(207, 140, 171, 0.18);
   --json-key: #d75b8f;
   --json-string: #7a63d6;
   --json-number: #da7a39;
@@ -23,10 +23,10 @@ body {
   font-family: "M PLUS Rounded 1c", "Noto Sans JP", sans-serif;
   color: var(--text);
   background:
-    radial-gradient(circle at top left, rgba(255, 196, 223, 0.85), transparent 28%),
-    radial-gradient(circle at top right, rgba(205, 183, 255, 0.48), transparent 22%),
-    radial-gradient(circle at bottom, rgba(255, 214, 184, 0.55), transparent 26%),
-    linear-gradient(180deg, #fffafd 0%, #fff4f8 44%, #fffdf7 100%);
+    radial-gradient(circle at top left, rgba(255, 209, 227, 0.82), transparent 24%),
+    radial-gradient(circle at 84% 10%, rgba(255, 235, 199, 0.52), transparent 18%),
+    radial-gradient(circle at bottom right, rgba(228, 205, 255, 0.34), transparent 24%),
+    linear-gradient(180deg, #fffdfd 0%, #fff6f9 48%, #fffdf8 100%);
   overflow-x: hidden;
 }
 
@@ -41,19 +41,21 @@ body::after {
 
 body::before {
   background-image:
-    radial-gradient(circle at 14% 18%, rgba(255, 255, 255, 0.95) 0 1px, transparent 1px),
-    radial-gradient(circle at 78% 24%, rgba(255, 255, 255, 0.95) 0 1px, transparent 1px),
-    radial-gradient(circle at 28% 72%, rgba(255, 255, 255, 0.9) 0 1px, transparent 1px),
-    radial-gradient(circle at 72% 84%, rgba(255, 255, 255, 0.95) 0 1px, transparent 1px);
-  opacity: 0.8;
+    radial-gradient(circle at 16% 12%, rgba(255, 255, 255, 0.96) 0 1px, transparent 1px),
+    radial-gradient(circle at 82% 22%, rgba(255, 255, 255, 0.92) 0 1px, transparent 1px),
+    radial-gradient(circle at 24% 78%, rgba(255, 255, 255, 0.92) 0 1px, transparent 1px),
+    radial-gradient(circle at 74% 82%, rgba(255, 255, 255, 0.95) 0 1px, transparent 1px);
+  opacity: 0.65;
 }
 
 body::after {
   background:
-    linear-gradient(135deg, transparent 0 48%, rgba(255, 182, 212, 0.08) 48% 52%, transparent 52%),
-    linear-gradient(45deg, transparent 0 48%, rgba(205, 183, 255, 0.07) 48% 52%, transparent 52%);
-  background-size: 220px 220px;
-  opacity: 0.35;
+    radial-gradient(ellipse at 10% 24%, rgba(255, 205, 226, 0.34) 0 8px, transparent 10px),
+    radial-gradient(ellipse at 70% 14%, rgba(255, 218, 235, 0.28) 0 8px, transparent 10px),
+    radial-gradient(ellipse at 30% 86%, rgba(255, 221, 236, 0.26) 0 7px, transparent 9px),
+    radial-gradient(ellipse at 82% 74%, rgba(255, 213, 228, 0.3) 0 7px, transparent 9px);
+  background-size: 280px 280px;
+  opacity: 0.5;
 }
 
 .bg-orb {
@@ -66,19 +68,19 @@ body::after {
 }
 
 .bg-orb-a {
-  top: 2%;
+  top: -4%;
   left: -10%;
-  width: 420px;
-  height: 420px;
-  background: rgba(255, 163, 205, 0.34);
+  width: 520px;
+  height: 520px;
+  background: rgba(255, 189, 218, 0.3);
 }
 
 .bg-orb-b {
   right: -12%;
-  bottom: 0;
-  width: 480px;
-  height: 480px;
-  background: rgba(212, 190, 255, 0.26);
+  bottom: -6%;
+  width: 560px;
+  height: 560px;
+  background: rgba(238, 210, 255, 0.2);
 }
 
 .bg-grid {
@@ -86,7 +88,7 @@ body::after {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  opacity: 0.18;
+  opacity: 0.09;
   background-image:
     linear-gradient(rgba(240, 185, 212, 0.28) 1px, transparent 1px),
     linear-gradient(90deg, rgba(240, 185, 212, 0.28) 1px, transparent 1px);
@@ -111,7 +113,7 @@ body::after {
 
 .eyebrow {
   margin: 0 0 12px;
-  color: #d870a2;
+  color: #ca709b;
   letter-spacing: 0.22em;
   font-size: 12px;
   text-transform: uppercase;
@@ -122,8 +124,9 @@ h1 {
   font-size: clamp(42px, 8vw, 84px);
   line-height: 0.96;
   letter-spacing: -0.04em;
-  color: #7d4668;
+  color: #733f5d;
   text-wrap: balance;
+  text-shadow: 0 8px 30px rgba(255, 255, 255, 0.6);
 }
 
 .subtitle {
@@ -144,7 +147,7 @@ h1 {
   border: 1px solid var(--line-strong);
   border-radius: 32px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.74), rgba(255, 249, 251, 0.72)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.76), rgba(255, 247, 250, 0.76)),
     var(--panel);
   backdrop-filter: blur(24px);
   box-shadow: var(--shadow);
@@ -223,7 +226,7 @@ h1 {
   border: 1px solid var(--line);
   border-radius: 34px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 249, 251, 0.7)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 247, 250, 0.74)),
     var(--panel-strong);
   backdrop-filter: blur(20px);
   box-shadow: var(--shadow);
@@ -355,7 +358,8 @@ h1 {
   padding: 8px;
   border: 1px solid rgba(202, 136, 174, 0.18);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.52);
+  background: rgba(255, 251, 253, 0.8);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
 }
 
 .tab-btn {
@@ -763,11 +767,12 @@ h1 {
 
 .chart-shell {
   margin-top: 22px;
-  padding: 18px;
-  border: 1px solid var(--line);
-  border-radius: 30px;
+  padding: 20px;
+  border: 1px solid rgba(197, 132, 164, 0.22);
+  border-radius: 32px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 245, 249, 0.94)),
+    radial-gradient(circle at top right, rgba(255, 223, 236, 0.62), transparent 26%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 247, 250, 0.94)),
     var(--panel-strong);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.86),
@@ -789,7 +794,7 @@ h1 {
 
 .chart-title {
   margin: 0;
-  font-size: 18px;
+  font-size: 22px;
   font-weight: 700;
   color: #7a4866;
 }
@@ -874,11 +879,13 @@ h1 {
 }
 
 .chart-frame-wrap {
-  border-radius: 22px;
+  border-radius: 26px;
   overflow: hidden;
-  border: 1px solid rgba(202, 136, 174, 0.18);
-  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(202, 136, 174, 0.22);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 248, 251, 0.98));
   min-height: 180px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.84);
 }
 
 .chart-frame {
