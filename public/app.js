@@ -495,30 +495,30 @@ function createStat(label, value) {
 }
 
 function createValueElement(label, value) {
-  const text = formatValue(value);
-  if (isSocialLabel(label) && value) {
-    const link = document.createElement("a");
-    link.className = "stat-value stat-link";
-    link.href = String(value);
-    link.target = "_blank";
-    link.rel = "noreferrer";
-    link.textContent = prettyLinkText(String(value));
-    return link;
+  if (isSocialLabel(label)) {
+    if (value) {
+      const link = document.createElement("a");
+      link.className = "stat-value social-action is-live";
+      link.href = String(value);
+      link.target = "_blank";
+      link.rel = "noreferrer";
+      link.textContent = "Open";
+      return link;
+    }
+
+    const badge = document.createElement("button");
+    badge.className = "stat-value social-action is-missing";
+    badge.type = "button";
+    badge.disabled = true;
+    badge.textContent = "Unavailable";
+    return badge;
   }
 
+  const text = formatValue(value);
   const content = document.createElement("p");
   content.className = "stat-value";
   content.textContent = text;
   return content;
-}
-
-function prettyLinkText(value) {
-  try {
-    const url = new URL(value);
-    return url.hostname.replace(/^www\./, "") + url.pathname;
-  } catch {
-    return value;
-  }
 }
 
 function isSocialLabel(label) {
@@ -579,7 +579,7 @@ function applyValueStyle(item, label, value) {
   }
 
   if (isSocialLabel(label)) {
-    item.classList.add("is-link");
+    item.classList.add("is-social");
   }
 
   if (text.length > 90) {

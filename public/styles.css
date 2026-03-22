@@ -483,10 +483,6 @@ h1 {
   color: inherit;
 }
 
-.stat-link {
-  text-decoration: none;
-}
-
 .stat.is-code .stat-value {
   font-family: "IBM Plex Mono", monospace;
   font-size: 15px;
@@ -504,12 +500,46 @@ h1 {
   font-size: 17px;
 }
 
-.stat.is-link .stat-value {
-  color: #8a58a7;
-}
-
 .stat.is-compact .stat-value {
   font-size: 15px;
+}
+
+.stat.is-social .stat-value {
+  margin-top: 14px;
+}
+
+.social-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  width: 100%;
+  border-radius: 16px;
+  border: 1px solid transparent;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: none;
+  transition: transform 160ms ease, filter 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.social-action.is-live {
+  color: #236b4e;
+  background: linear-gradient(135deg, rgba(216, 255, 227, 0.98), rgba(235, 255, 243, 0.98));
+  border-color: rgba(96, 203, 143, 0.45);
+  box-shadow: 0 10px 24px rgba(117, 214, 159, 0.18);
+}
+
+.social-action.is-live:hover {
+  transform: translateY(-1px);
+  filter: saturate(1.05);
+}
+
+.social-action.is-missing {
+  color: #a34c67;
+  background: linear-gradient(135deg, rgba(255, 226, 234, 0.98), rgba(255, 240, 245, 0.98));
+  border-color: rgba(229, 137, 165, 0.38);
+  box-shadow: none;
+  cursor: not-allowed;
 }
 
 .stat-copy {
