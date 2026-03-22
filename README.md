@@ -1,14 +1,34 @@
-# Four.meme launcher
+# Sakura
 
-This workspace contains a Node/TypeScript launcher for creating a token on Four.meme through the documented flow:
+Sakura is a BSC meme ops toolkit built around the Four.meme flow.
 
-1. Generate nonce
-2. Sign in with the launch wallet
-3. Upload the token image
-4. Request `createArg` and API signature
-5. Call `TokenManager2.createToken(bytes args, bytes signature)` on BSC
+It does two jobs:
 
-## Setup
+- launches tokens through the documented Four.meme flow
+- turns any contract address into a clean token intelligence page with market data and native charts
+
+## What It Does
+
+- Four.meme launch flow
+- wallet sign-in and nonce flow
+- token image upload
+- create payload + signature handling
+- on-chain `createToken` execution
+- symbol candidate testing
+- contract address lookup UI
+- Four.meme REST + on-chain data merge
+- DexScreener pair discovery
+- native candlestick chart rendering
+
+## Stack
+
+- Node.js
+- TypeScript
+- `viem`
+- Four.meme official integration package
+- lightweight-charts
+
+## Local Setup
 
 ```bash
 npm install
@@ -16,26 +36,16 @@ copy .env.example .env
 copy token.example.json token.json
 ```
 
-Fill `.env` with:
+Fill `.env`:
 
-- `PRIVATE_KEY`: wallet used for login and on-chain creation
-- `BSC_RPC_URL`: BSC RPC endpoint
+- `PRIVATE_KEY`
+- `BSC_RPC_URL`
 
-Put your token image on disk and update `imagePath` in `token.json`.
+`token.json` is intentionally ignored locally, so your live launch config stays private.
 
-## Usage
+## Commands
 
-Dry run:
-
-```bash
-npm run launch -- token.json
-```
-
-Real launch:
-
-1. Set `"dryRun": false` in `token.json`
-2. Make sure the wallet has enough BNB for the current Four.meme launch fee and your `presale`
-3. Run:
+Launch dry run:
 
 ```bash
 npm run launch -- token.json
@@ -47,13 +57,13 @@ Check symbol candidates:
 npm run symbol-check -- token.json symbols.txt
 ```
 
-Lookup a token by CA:
+Lookup by contract address:
 
 ```bash
 npm run ca -- 0xYourContractAddress
 ```
 
-Run the website locally:
+Run the web app:
 
 ```bash
 npm start
@@ -65,14 +75,50 @@ Open:
 http://localhost:3000
 ```
 
-One-command Docker run:
+Docker:
 
 ```bash
 docker compose up --build
 ```
 
+## Web App
+
+The UI currently includes:
+
+- CA input and instant lookup
+- token identity panel
+- contract + creator view
+- website / twitter / telegram links
+- Four.meme + chain data merge
+- native chart with timeframe switching
+- raw response inspector
+
+## Deploy
+
+Best simple deploy target: Render Web Service.
+
+Suggested settings:
+
+- Build Command: `npm install`
+- Start Command: `npm start`
+
+If needed, add environment variables in Render:
+
+- `BSC_RPC_URL`
+- any future API keys
+
+## Repo Structure
+
+```text
+public/              frontend
+src/server.ts        web server
+src/launch.ts        Four.meme launcher
+src/ca.ts            CLI CA lookup
+src/lib/ca-lookup.ts data aggregation + chart feeds
+```
+
 ## Notes
 
-- The launcher currently validates and targets the BNB quote pair. That is the safest verified path from Four.meme's current public docs.
-- If the wallet is recognized by Four.meme's `AgentIdentifier` contract, the launched token should be marked as created by an agent wallet.
-- The script reads the live raised-token config from `https://four.meme/meme-api/v1/public/config`.
+- The launch path is currently centered on the BNB quote pair.
+- The chart layer uses live discovered pairs and external OHLCV market data.
+- The UI is positioned to evolve into a broader AI agent product, not just a launcher.
