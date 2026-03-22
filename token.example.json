@@ -1,0 +1,17 @@
+{
+  "name": "Agent Launch Token",
+  "shortName": "AGNT",
+  "desc": "Launched through the Four.meme API and TokenManager2 flow.",
+  "imagePath": "./token.png",
+  "label": "AI",
+  "webUrl": "https://example.com",
+  "twitterUrl": "https://x.com/example",
+  "telegramUrl": "https://t.me/example",
+  "presale": "0.05",
+  "launchDelaySeconds": 120,
+  "raisedTokenSymbol": "BNB",
+  "walletName": "MetaMask",
+  "feePlan": false,
+  "onlyMPC": false,
+  "dryRun": true
+}

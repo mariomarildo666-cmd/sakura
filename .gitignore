@@ -1,0 +1,6 @@
+node_modules
+.env
+dist
+server.log
+token.json
+token.png

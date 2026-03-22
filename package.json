@@ -1,0 +1,31 @@
+{
+  "name": "new-project-2",
+  "version": "1.0.0",
+  "description": "Four.meme token launcher",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "ca": "tsx src/ca.ts",
+    "launch": "tsx src/launch.ts",
+    "start": "tsx src/server.ts",
+    "serve": "tsx src/server.ts",
+    "symbol-check": "tsx src/launch.ts symbol-check"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@four-meme/four-meme-ai": "^1.0.7",
+    "dotenv": "^17.3.1",
+    "mime-types": "^3.0.2",
+    "viem": "^2.47.4",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/mime-types": "^3.0.1",
+    "@types/node": "^25.5.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}
