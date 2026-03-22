@@ -19,6 +19,16 @@ type DexPair = {
   dexId?: string;
   url?: string;
   pairAddress?: string;
+  info?: {
+    websites?: Array<{
+      label?: string | null;
+      url?: string | null;
+    }> | null;
+    socials?: Array<{
+      type?: string | null;
+      url?: string | null;
+    }> | null;
+  } | null;
   liquidity?: {
     usd?: number;
   } | null;
@@ -79,9 +89,9 @@ export async function lookupCa(rawInput: string, rpcUrl?: string) {
       creator: firstString(rest.data, ["creator", "founder", "userAddress"]),
       logoUrl: firstString(rest.data, ["imgUrl", "logoUrl", "image"]),
       description: firstString(rest.data, ["desc", "descr", "description"]),
-      website: firstString(rest.data, ["webUrl"]),
-      twitter: firstString(rest.data, ["twitterUrl"]),
-      telegram: firstString(rest.data, ["telegramUrl"]),
+      website: firstString(rest.data, ["webUrl"]) || getDexWebsite(bestDexPair),
+      twitter: firstString(rest.data, ["twitterUrl"]) || getDexSocial(bestDexPair, "twitter"),
+      telegram: firstString(rest.data, ["telegramUrl"]) || getDexSocial(bestDexPair, "telegram"),
       aiCreator: firstBoolean(rest.data, ["aiCreator"]),
       liquidityAdded,
       raisedBnb: formatEther(funds),
@@ -280,5 +290,32 @@ function firstBoolean(data: Record<string, unknown> | undefined, keys: string[])
     const value = data[key];
     if (typeof value === "boolean") return value;
   }
+  return null;
+}
+
+function getDexWebsite(pair: DexPair | null) {
+  const websites = pair?.info?.websites;
+  if (!Array.isArray(websites)) return null;
+
+  for (const website of websites) {
+    if (typeof website?.url === "string" && website.url.length > 0) {
+      return website.url;
+    }
+  }
+
+  return null;
+}
+
+function getDexSocial(pair: DexPair | null, type: string) {
+  const socials = pair?.info?.socials;
+  if (!Array.isArray(socials)) return null;
+
+  for (const social of socials) {
+    if (typeof social?.type === "string" && social.type.toLowerCase() !== type) continue;
+    if (typeof social?.url === "string" && social.url.length > 0) {
+      return social.url;
+    }
+  }
+
   return null;
 }
