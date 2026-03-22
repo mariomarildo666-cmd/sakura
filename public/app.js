@@ -19,6 +19,11 @@ const tokenLogo = document.querySelector("#token-logo");
 const resultName = document.querySelector("#result-name");
 const copyCa = document.querySelector("#copy-ca");
 const openFourmeme = document.querySelector("#open-fourmeme");
+const sakuraShell = document.querySelector("#sakura-shell");
+const sakuraVerdict = document.querySelector("#sakura-verdict");
+const sakuraSummary = document.querySelector("#sakura-summary");
+const sakuraReasons = document.querySelector("#sakura-reasons");
+const sakuraCautions = document.querySelector("#sakura-cautions");
 const chartShell = document.querySelector("#chart-shell");
 const chartFrame = document.querySelector("#chart-frame");
 const chartLink = document.querySelector("#chart-link");
@@ -96,6 +101,7 @@ form.addEventListener("submit", async (event) => {
   overviewGrid.innerHTML = "";
   marketGrid.innerHTML = "";
   chartShell.classList.add("hidden");
+  sakuraShell.classList.add("hidden");
   chartStatus.classList.add("hidden");
   chartStatus.textContent = "";
   resetChartMetrics();
@@ -160,9 +166,39 @@ async function renderResult(data) {
     marketGrid.appendChild(createStat(label, data.summary?.[key]));
   }
 
+  await renderSakura(data.tokenAddress);
   await renderChart(data);
   rawOutput.innerHTML = syntaxHighlight(data);
   result.classList.remove("hidden");
+}
+
+async function renderSakura(address) {
+  sakuraShell.classList.remove("hidden");
+  sakuraVerdict.className = "sakura-verdict";
+  sakuraVerdict.textContent = "Reading";
+  sakuraSummary.textContent = "Sakura is checking the chart, liquidity, and visible danger signals for the trader.";
+  sakuraReasons.innerHTML = "";
+  sakuraCautions.innerHTML = "";
+
+  try {
+    const response = await fetch(`/api/analyze?address=${encodeURIComponent(address)}`);
+    const analysis = await response.json();
+
+    if (!response.ok) {
+      throw new Error(analysis.error || "Sakura analysis failed.");
+    }
+
+    sakuraVerdict.textContent = analysis.verdict;
+    sakuraVerdict.classList.add(analysis.verdict === "bullish" ? "is-bullish" : "is-bearish");
+    sakuraSummary.textContent = analysis.summary;
+    fillSakuraList(sakuraReasons, analysis.reasons, "Sakura does not see enough clean bullish signals yet.");
+    fillSakuraList(sakuraCautions, analysis.cautions, "No major danger signal is visible right now.");
+  } catch (error) {
+    sakuraVerdict.textContent = "Offline";
+    sakuraSummary.textContent = error instanceof Error ? error.message : "Sakura analysis failed.";
+    fillSakuraList(sakuraReasons, [], "No analysis points available.");
+    fillSakuraList(sakuraCautions, [], "No caution points available.");
+  }
 }
 
 function renderOverview(data) {
@@ -381,6 +417,16 @@ function destroyChart() {
 
   chartFrame.innerHTML = "";
   chartLoading = false;
+}
+
+function fillSakuraList(target, items, fallbackText) {
+  target.innerHTML = "";
+  const values = Array.isArray(items) && items.length ? items : [fallbackText];
+  for (const item of values) {
+    const li = document.createElement("li");
+    li.textContent = item;
+    target.appendChild(li);
+  }
 }
 
 function derivePrecision(candles) {

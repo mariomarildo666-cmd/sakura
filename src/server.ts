@@ -4,6 +4,7 @@ import { createServer, ServerResponse } from "node:http";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { analyzeWithSakura } from "./agents/sakura.js";
 import { fetchChartCandlesForTimeframe, lookupCa } from "./lib/ca-lookup.js";
 
 const PORT = Number(process.env.PORT || 3000);
@@ -45,6 +46,18 @@ const server = createServer(async (req, res) => {
       }
 
       const result = await fetchChartCandlesForTimeframe(address, timeframe);
+      sendJson(res, 200, result);
+      return;
+    }
+
+    if (url.pathname === "/api/analyze") {
+      const address = url.searchParams.get("address")?.trim() || "";
+      if (!address) {
+        sendJson(res, 400, { error: "address query is required" });
+        return;
+      }
+
+      const result = await analyzeWithSakura(address);
       sendJson(res, 200, result);
       return;
     }

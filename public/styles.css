@@ -551,6 +551,100 @@ h1 {
     var(--panel-strong);
 }
 
+.sakura-shell {
+  margin-top: 22px;
+  padding: 20px;
+  border: 1px solid rgba(202, 136, 174, 0.22);
+  border-radius: 30px;
+  background:
+    radial-gradient(circle at top right, rgba(255, 226, 238, 0.9), transparent 28%),
+    linear-gradient(180deg, rgba(255, 251, 253, 0.96), rgba(255, 244, 249, 0.94));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.86),
+    0 18px 36px rgba(233, 171, 199, 0.12);
+}
+
+.sakura-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.sakura-eyebrow {
+  margin: 0;
+  color: #c6769e;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.sakura-title {
+  margin: 6px 0 0;
+  color: #7a4866;
+  font-size: 24px;
+}
+
+.sakura-verdict {
+  min-width: 112px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  text-align: center;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(202, 136, 174, 0.2);
+}
+
+.sakura-verdict.is-bullish {
+  color: #2a8d63;
+  background: linear-gradient(135deg, rgba(217, 255, 230, 0.95), rgba(239, 255, 244, 0.96));
+  border-color: rgba(112, 212, 156, 0.35);
+}
+
+.sakura-verdict.is-bearish {
+  color: #a34870;
+  background: linear-gradient(135deg, rgba(255, 226, 238, 0.95), rgba(255, 243, 247, 0.96));
+  border-color: rgba(226, 129, 170, 0.35);
+}
+
+.sakura-summary {
+  margin: 16px 0 0;
+  color: #83566f;
+  line-height: 1.7;
+  font-size: 15px;
+}
+
+.sakura-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.sakura-card {
+  padding: 16px;
+  border-radius: 22px;
+  border: 1px solid rgba(202, 136, 174, 0.18);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.sakura-card-label {
+  margin: 0 0 10px;
+  color: #b07f98;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.sakura-list {
+  margin: 0;
+  padding-left: 18px;
+  color: #724b61;
+  line-height: 1.75;
+}
+
 .chart-shell {
   margin-top: 22px;
   padding: 18px;
@@ -802,6 +896,10 @@ h1 {
 @media (max-width: 720px) {
   .overview-row-top,
   .overview-row-social {
+    grid-template-columns: 1fr;
+  }
+
+  .sakura-grid {
     grid-template-columns: 1fr;
   }
 
