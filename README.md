@@ -1,11 +1,24 @@
-# Sakura
+```text
+███████╗ █████╗ ██╗  ██╗██╗   ██╗██████╗  █████╗
+██╔════╝██╔══██╗██║ ██╔╝██║   ██║██╔══██╗██╔══██╗
+███████╗███████║█████╔╝ ██║   ██║██████╔╝███████║
+╚════██║██╔══██║██╔═██╗ ██║   ██║██╔══██╗██╔══██║
+███████║██║  ██║██║  ██╗╚██████╔╝██║  ██║██║  ██║
+╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝
+```
 
-Sakura is a BSC meme ops toolkit built around the Four.meme flow.
+```text
+┌──────────────────────────────────────────────────────────────┐
+│ BSC AGENT STACK // FOUR.MEME LAUNCHER // CA INTEL // CHARTS │
+└──────────────────────────────────────────────────────────────┘
+```
 
-It does two jobs:
+Sakura is a hard-edged BSC meme ops toolkit built for launch flows, contract intelligence, and live token interfaces.
+
+It does two jobs cleanly:
 
 - launches tokens through the documented Four.meme flow
-- turns any contract address into a clean token intelligence page with market data and native charts
+- turns any contract address into a live token intelligence surface with market data and native charts
 
 ## What It Does
 
