@@ -476,7 +476,7 @@ function createStat(label, value) {
   const content = createValueElement(label, value);
   item.append(title, content);
 
-  if (isCopyable(value)) {
+  if (isCopyable(value) && !isSocialLabel(label)) {
     const copyButton = document.createElement("button");
     copyButton.type = "button";
     copyButton.className = "stat-copy";
