@@ -20,6 +20,7 @@ const resultName = document.querySelector("#result-name");
 const copyCa = document.querySelector("#copy-ca");
 const openFourmeme = document.querySelector("#open-fourmeme");
 const sakuraShell = document.querySelector("#sakura-shell");
+const sakuraFigure = document.querySelector("#sakura-figure");
 const sakuraVerdict = document.querySelector("#sakura-verdict");
 const sakuraSummary = document.querySelector("#sakura-summary");
 const sakuraReasons = document.querySelector("#sakura-reasons");
@@ -176,6 +177,7 @@ async function renderSakura(address) {
   sakuraShell.classList.remove("hidden");
   sakuraVerdict.className = "sakura-verdict";
   sakuraVerdict.textContent = "Reading";
+  setSakuraFigure("neutral");
   sakuraSummary.textContent = "Sakura is checking the chart, liquidity, and visible danger signals for the trader.";
   sakuraReasons.innerHTML = "";
   sakuraCautions.innerHTML = "";
@@ -190,14 +192,36 @@ async function renderSakura(address) {
 
     sakuraVerdict.textContent = analysis.verdict;
     sakuraVerdict.classList.add(analysis.verdict === "bullish" ? "is-bullish" : "is-bearish");
+    setSakuraFigure(analysis.verdict === "bullish" ? "bullish" : "bearish");
     sakuraSummary.textContent = analysis.summary;
     fillSakuraList(sakuraReasons, analysis.reasons, "Sakura does not see enough clean bullish signals yet.");
     fillSakuraList(sakuraCautions, analysis.cautions, "No major danger signal is visible right now.");
   } catch (error) {
     sakuraVerdict.textContent = "Offline";
+    setSakuraFigure("neutral");
     sakuraSummary.textContent = error instanceof Error ? error.message : "Sakura analysis failed.";
     fillSakuraList(sakuraReasons, [], "No analysis points available.");
     fillSakuraList(sakuraCautions, [], "No caution points available.");
+  }
+}
+
+function setSakuraFigure(mode) {
+  if (!sakuraFigure) return;
+
+  switch (mode) {
+    case "bullish":
+      sakuraFigure.src = "/assets/sakura-bullish.png";
+      sakuraFigure.alt = "Sakura bullish";
+      break;
+    case "bearish":
+      sakuraFigure.src = "/assets/sakura-bearish.png";
+      sakuraFigure.alt = "Sakura bearish";
+      break;
+    case "neutral":
+    default:
+      sakuraFigure.src = "/assets/sakura-neutral.png";
+      sakuraFigure.alt = "Sakura neutral";
+      break;
   }
 }
 
