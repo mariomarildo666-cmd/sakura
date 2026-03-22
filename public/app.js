@@ -526,7 +526,7 @@ function isSocialLabel(label) {
 }
 
 function formatValue(value) {
-  if (value === null || value === undefined || value === "") return "N/A";
+  if (value === null || value === undefined || value === "") return "-";
   if (typeof value === "boolean") return value ? "Yes" : "No";
   return String(value);
 }
