@@ -53,6 +53,8 @@ Fill `.env`:
 
 - `PRIVATE_KEY`
 - `BSC_RPC_URL`
+- `OPENAI_API_KEY`
+- optional: `OPENAI_MODEL` default is `gpt-5.4-mini`
 
 `token.json` is intentionally ignored locally, so your live launch config stays private.
 
@@ -104,6 +106,7 @@ The UI currently includes:
 - website / twitter / telegram links
 - Four.meme + chain data merge
 - native chart with timeframe switching
+- Sakura analysis with OpenAI fallback to local heuristics
 - raw response inspector
 
 ## Deploy
@@ -118,7 +121,8 @@ Suggested settings:
 If needed, add environment variables in Render:
 
 - `BSC_RPC_URL`
-- any future API keys
+- `OPENAI_API_KEY`
+- optional: `OPENAI_MODEL`
 
 ## Repo Structure
 

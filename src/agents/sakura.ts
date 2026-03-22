@@ -2,12 +2,177 @@ import { fetchChartCandlesForTimeframe, lookupCa } from "../lib/ca-lookup.js";
 
 type SakuraVerdict = "bullish" | "bearish";
 
+type SakuraResult = {
+  tokenAddress: string;
+  verdict: SakuraVerdict;
+  score: number;
+  confidence: number | null;
+  persona: string;
+  summary: string;
+  market: {
+    priceUsd: number | null;
+    marketCap: number | null;
+    liquidityUsd: number | null;
+    changePct1h: number;
+    volatilityPct1h: number;
+  };
+  reasons: string[];
+  cautions: string[];
+  engine: "heuristic" | "openai";
+  model: string | null;
+};
+
+type SakuraLlmPayload = {
+  verdict?: unknown;
+  summary?: unknown;
+  reasons?: unknown;
+  cautions?: unknown;
+  confidence?: unknown;
+};
+
+const SAKURA_PERSONA =
+  "Sakura is a cute anime guardian who stays beside the trader and watches for danger first.";
+
 export async function analyzeWithSakura(rawInput: string) {
   const [lookup, chart] = await Promise.all([
     lookupCa(rawInput),
     fetchChartCandlesForTimeframe(rawInput, "1h"),
   ]);
 
+  const heuristic = analyzeHeuristically(lookup, chart.candles);
+  const openAiResult = await analyzeWithOpenAI(lookup, chart.candles, heuristic);
+
+  return openAiResult || heuristic;
+}
+
+async function analyzeWithOpenAI(
+  lookup: Awaited<ReturnType<typeof lookupCa>>,
+  candles: Array<{ open: number; high: number; low: number; close: number; volume?: number }>,
+  heuristic: SakuraResult,
+) {
+  const apiKey = process.env.OPENAI_API_KEY?.trim();
+  if (!apiKey) {
+    return null;
+  }
+
+  const model = process.env.OPENAI_MODEL?.trim() || "gpt-5.4-mini";
+  const candleSummary = summarizeCandles(candles);
+  const payload = {
+    model,
+    messages: [
+      {
+        role: "system",
+        content: [
+          "You are Sakura, a cute anime market guardian who protects the trader from bad setups.",
+          "You analyze BSC meme coins and must stay grounded in the supplied data only.",
+          "Return a raw JSON object only. No markdown. No code fences.",
+          'Use this exact shape: {"verdict":"bullish|bearish","summary":"string","reasons":["..."],"cautions":["..."],"confidence":0.0}',
+          "Keep summary to one short paragraph.",
+          "Reasons and cautions must each contain 2 to 4 concise strings.",
+          "If the setup is unclear or fragile, lean bearish because Sakura protects first.",
+        ].join(" "),
+      },
+      {
+        role: "user",
+        content: JSON.stringify(
+          {
+            token: {
+              address: lookup.tokenAddress,
+              name: lookup.summary.name,
+              symbol: lookup.summary.symbol,
+              creator: lookup.summary.creator,
+              description: lookup.summary.description,
+              website: lookup.summary.website,
+              twitter: lookup.summary.twitter,
+              telegram: lookup.summary.telegram,
+              aiCreator: lookup.summary.aiCreator,
+              liquidityAdded: lookup.summary.liquidityAdded,
+              raisedBnb: lookup.summary.raisedBnb,
+              maxRaisedBnb: lookup.summary.maxRaisedBnb,
+              launchTime: lookup.summary.launchTime,
+            },
+            market: {
+              priceUsd: lookup.dexScreener?.priceUsd || null,
+              marketCap: lookup.dexScreener?.marketCap || null,
+              liquidityUsd: lookup.dexScreener?.liquidityUsd || null,
+              dexId: lookup.dexScreener?.dexId || null,
+              dexUrl: lookup.dexScreener?.url || null,
+            },
+            candles1h: {
+              sampleSize: candles.length,
+              changePct: round(candleSummary.changePct),
+              volatilityPct: round(candleSummary.volatilityPct),
+              greenRatio: round(candleSummary.greenRatio),
+            },
+            heuristicBaseline: {
+              verdict: heuristic.verdict,
+              score: heuristic.score,
+              summary: heuristic.summary,
+              reasons: heuristic.reasons,
+              cautions: heuristic.cautions,
+            },
+          },
+          null,
+          2,
+        ),
+      },
+    ],
+    response_format: {
+      type: "json_object",
+    },
+  };
+
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const json = (await response.json()) as {
+      choices?: Array<{
+        message?: {
+          content?: string | null;
+        };
+      }>;
+    };
+
+    const content = json.choices?.[0]?.message?.content?.trim();
+    if (!content) {
+      return null;
+    }
+
+    const parsed = normalizeLlmResult(content);
+    if (!parsed) {
+      return null;
+    }
+
+    return {
+      ...heuristic,
+      verdict: parsed.verdict,
+      summary: parsed.summary,
+      reasons: parsed.reasons,
+      cautions: parsed.cautions,
+      confidence: parsed.confidence,
+      engine: "openai" as const,
+      model,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function analyzeHeuristically(
+  lookup: Awaited<ReturnType<typeof lookupCa>>,
+  candles: Array<{ open: number; high: number; low: number; close: number }>,
+): SakuraResult {
   const reasons: string[] = [];
   const cautions: string[] = [];
   let score = 0;
@@ -15,7 +180,7 @@ export async function analyzeWithSakura(rawInput: string) {
   const liquidityUsd = Number(lookup.dexScreener?.liquidityUsd || 0);
   const marketCap = Number(lookup.dexScreener?.marketCap || 0);
   const priceUsd = Number(lookup.dexScreener?.priceUsd || 0);
-  const candleSummary = summarizeCandles(chart.candles);
+  const candleSummary = summarizeCandles(candles);
 
   if (lookup.summary.liquidityAdded) {
     score += 2;
@@ -90,7 +255,8 @@ export async function analyzeWithSakura(rawInput: string) {
     tokenAddress: lookup.tokenAddress,
     verdict,
     score,
-    persona: "Sakura is a cute anime guardian who stays beside the trader and watches for danger first.",
+    confidence: null,
+    persona: SAKURA_PERSONA,
     summary,
     market: {
       priceUsd: Number.isFinite(priceUsd) ? priceUsd : null,
@@ -101,7 +267,54 @@ export async function analyzeWithSakura(rawInput: string) {
     },
     reasons: reasons.slice(0, 4),
     cautions: cautions.slice(0, 4),
+    engine: "heuristic",
+    model: null,
   };
+}
+
+function normalizeLlmResult(content: string) {
+  try {
+    const payload = JSON.parse(extractJsonObject(content)) as SakuraLlmPayload;
+    const verdict = payload.verdict === "bullish" ? "bullish" : payload.verdict === "bearish" ? "bearish" : null;
+    const summary = typeof payload.summary === "string" ? payload.summary.trim() : "";
+    const reasons = sanitizeStringList(payload.reasons);
+    const cautions = sanitizeStringList(payload.cautions);
+    const confidence = clampConfidence(payload.confidence);
+
+    if (!verdict || !summary || reasons.length === 0 || cautions.length === 0) {
+      return null;
+    }
+
+    return {
+      verdict,
+      summary,
+      reasons: reasons.slice(0, 4),
+      cautions: cautions.slice(0, 4),
+      confidence,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function extractJsonObject(content: string) {
+  const start = content.indexOf("{");
+  const end = content.lastIndexOf("}");
+  if (start === -1 || end === -1 || end <= start) {
+    throw new Error("No JSON object found.");
+  }
+  return content.slice(start, end + 1);
+}
+
+function sanitizeStringList(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
+}
+
+function clampConfidence(value: unknown) {
+  const number = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
+  if (!Number.isFinite(number)) return null;
+  return Math.max(0, Math.min(1, number));
 }
 
 function summarizeCandles(candles: Array<{ open: number; high: number; low: number; close: number }>) {
@@ -127,4 +340,8 @@ function summarizeCandles(candles: Array<{ open: number; high: number; low: numb
     volatilityPct: minLow > 0 ? ((maxHigh - minLow) / minLow) * 100 : 0,
     greenRatio: greenCount / candles.length,
   };
+}
+
+function round(value: number) {
+  return Math.round(value * 100) / 100;
 }
