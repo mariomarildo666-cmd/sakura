@@ -639,20 +639,36 @@ h1 {
     0 18px 36px rgba(233, 171, 199, 0.12);
 }
 
+.sakura-layout {
+  display: grid;
+  grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
+  gap: 22px;
+  align-items: stretch;
+}
+
+.sakura-visual {
+  display: flex;
+}
+
+.sakura-content {
+  min-width: 0;
+}
+
 .sakura-head {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: 16px;
 }
 
 .sakura-figure-shell {
-  flex: 0 0 auto;
+  flex: 1 1 auto;
   display: grid;
   place-items: center;
-  width: 116px;
-  height: 116px;
-  border-radius: 28px;
+  width: 100%;
+  min-height: 100%;
+  padding: 16px;
+  border-radius: 30px;
   border: 1px solid rgba(202, 136, 174, 0.18);
   background:
     radial-gradient(circle at top, rgba(255, 255, 255, 0.96), transparent 58%),
@@ -666,8 +682,9 @@ h1 {
 .sakura-figure {
   display: block;
   width: 100%;
-  height: 100%;
-  object-fit: cover;
+  max-width: 280px;
+  height: auto;
+  object-fit: contain;
 }
 
 .sakura-eyebrow {
@@ -1006,9 +1023,8 @@ h1 {
     grid-template-columns: 1fr;
   }
 
-  .sakura-head {
-    align-items: flex-start;
-    flex-wrap: wrap;
+  .sakura-layout {
+    grid-template-columns: 1fr;
   }
 
   .overview-right .stat--contract {
@@ -1061,8 +1077,7 @@ h1 {
   }
 
   .sakura-figure-shell {
-    width: 96px;
-    height: 96px;
+    min-height: 260px;
   }
 
   .chart-actions {
