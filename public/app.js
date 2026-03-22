@@ -214,7 +214,7 @@ function renderOverview(data) {
   const socialRow = document.createElement("div");
   socialRow.className = "overview-row overview-row-social";
   for (const [label, key] of leftOverviewGroups[1]) {
-    socialRow.appendChild(createStat(label, data.summary?.[key]));
+    socialRow.appendChild(createSocialStat(label, data.summary?.[key]));
   }
 
   left.append(topRow, socialRow);
@@ -492,6 +492,27 @@ function createStat(label, value) {
   }
 
   return item;
+}
+
+function createSocialStat(label, value) {
+  const href = typeof value === "string" && value.length > 0 ? value : null;
+
+  if (href) {
+    const link = document.createElement("a");
+    link.className = `social-stat ${toLabelClass(label)} is-live`;
+    link.href = href;
+    link.target = "_blank";
+    link.rel = "noreferrer";
+    link.textContent = label;
+    return link;
+  }
+
+  const button = document.createElement("button");
+  button.className = `social-stat ${toLabelClass(label)} is-missing`;
+  button.type = "button";
+  button.disabled = true;
+  button.textContent = label;
+  return button;
 }
 
 function createValueElement(label, value) {
