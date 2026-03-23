@@ -94,7 +94,7 @@ body::after {
   width: 100%;
   max-width: 1400px;
   margin: 0 auto;
-  padding: 34px 22px 40px;
+  padding: 34px 22px;
 }
 
 .landing-frame {
@@ -153,9 +153,11 @@ body::after {
   left: 22px;
   display: grid;
   gap: 14px;
+  z-index: 4;
 }
 
 .rail-btn {
+  position: relative;
   width: 52px;
   height: 52px;
   display: grid;
@@ -167,6 +169,8 @@ body::after {
   text-decoration: none;
   font-size: 18px;
   box-shadow: 0 12px 24px rgba(193, 172, 181, 0.18);
+  pointer-events: auto;
+  cursor: pointer;
 }
 
 .rail-icon {
