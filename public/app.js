@@ -172,8 +172,7 @@ async function renderResult(data) {
     marketGrid.appendChild(createStat(label, data.summary?.[key]));
   }
 
-  await renderSakura(data.tokenAddress);
-  await renderChart(data);
+  await Promise.all([renderSakura(data.tokenAddress), renderChart(data)]);
   rawOutput.innerHTML = syntaxHighlight(data);
   result.classList.remove("hidden");
 }
