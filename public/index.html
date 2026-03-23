@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&family=Orbitron:wght@500;700;800&family=Rajdhani:wght@500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=IBM+Plex+Mono:wght@400;500;700&family=Orbitron:wght@500;700;800&family=Rajdhani:wght@500;600;700&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/styles.css" />
@@ -19,35 +19,19 @@
 
     <main class="shell">
       <section class="landing-frame">
+        <aside class="side-rail" aria-label="Quick links">
+          <a href="/" class="rail-btn rail-home" aria-label="Home">⌂</a>
+          <a href="https://x.com/" target="_blank" rel="noreferrer" class="rail-btn rail-x" aria-label="X">X</a>
+          <a href="https://github.com/mariomarildo666-cmd/sakura" target="_blank" rel="noreferrer" class="rail-btn rail-gh" aria-label="GitHub">GH</a>
+          <button type="button" class="rail-btn" aria-label="Saved">♡</button>
+        </aside>
+
         <header class="hero-topbar">
-          <a href="/" class="hero-brand" aria-label="Sakura Terminal home">理解</a>
+          <div class="hero-brand-block">
+            <a href="/" class="hero-brand" aria-label="Sakura Terminal home">アニマンガヘブン</a>
+          </div>
 
-          <nav class="hero-links hero-links-left" aria-label="Primary">
-            <a href="/" class="hero-link">My List</a>
-            <a href="https://github.com/mariomarildo666-cmd/sakura" target="_blank" rel="noreferrer" class="hero-link">Series</a>
-            <a href="#result" class="hero-link">Movies</a>
-            <a href="#panel-overview" class="hero-link">Mangas</a>
-            <a href="https://x.com/" target="_blank" rel="noreferrer" class="hero-link">Specials (OVAs)</a>
-            <a href="#panel-market" class="hero-link">Seasonals</a>
-          </nav>
-
-          <nav class="hero-links hero-links-right" aria-label="Secondary">
-            <a href="https://x.com/" target="_blank" rel="noreferrer" class="hero-link">Login</a>
-            <a href="https://github.com/mariomarildo666-cmd/sakura" target="_blank" rel="noreferrer" class="hero-account">Create Account</a>
-          </nav>
-        </header>
-
-        <div class="hero-shell">
-          <div class="hero-copy">
-            <p class="hero-index">LIVE TERMINAL</p>
-            <h1 class="hero-title">Vast Universe Of Meme Coins,<br />Offering An Unfiltered Read<br />Right At Your Fingertips.</h1>
-            <p class="hero-subtitle">Search any BSC contract and let Sakura break down the vibe, socials, chart, and launch state without the fake polished AI tone.</p>
-
-            <div class="hero-cta-row">
-              <button id="hero-start" class="hero-start-btn" type="button">Explore Categories</button>
-              <a href="https://github.com/mariomarildo666-cmd/sakura" target="_blank" rel="noreferrer" class="hero-secondary-btn">Sign Up</a>
-            </div>
-
+          <div class="hero-topbar-right">
             <form id="lookup-form" class="hero-search">
               <label class="sr-only" for="ca-input">Contract address</label>
               <input
@@ -61,30 +45,73 @@
               <button type="submit">Lookup</button>
             </form>
 
-            <section id="history-shell" class="hero-history hidden">
-              <div class="hero-history-head">
-                <p class="hero-history-title">Recent Searches</p>
-              </div>
-              <div id="history-list" class="hero-history-list"></div>
-            </section>
+            <div class="hero-user-strip">
+              <span class="hero-user-icon">⌕</span>
+              <span class="hero-user-icon">◌</span>
+              <span class="hero-user-name">Hi, Sakura</span>
+              <span class="hero-user-avatar">SA</span>
+            </div>
+          </div>
+        </header>
 
-            <p id="status" class="status" aria-live="polite"></p>
+        <div class="hero-shell">
+          <div class="hero-copy">
+            <p class="hero-index">SAKURA BLOSSOM TERMINAL</p>
+            <h1 class="hero-title">IMMERSE IN<br />MEME COIN<br />MANGA</h1>
+            <p class="hero-subtitle">Drop a BSC contract and let Sakura read the chart, socials, launch state, and degen vibe in one terminal.</p>
           </div>
 
           <div class="hero-stage">
             <div class="hero-character-wrap">
-              <div class="hero-character-backdrop"></div>
-              <div class="hero-character-panel"></div>
-              <div class="hero-character-frame">
-                <div class="hero-character-image"></div>
-              </div>
-              <div class="hero-stage-arrows" aria-hidden="true">
-                <button type="button" class="hero-arrow">←</button>
-                <button type="button" class="hero-arrow">→</button>
-              </div>
+              <div class="hero-character-glow"></div>
+              <img src="/assets/sakura-neutral.png" alt="Sakura hero" class="hero-character" />
             </div>
           </div>
         </div>
+
+        <div class="hero-cards">
+          <article class="hero-card hero-card-explore">
+            <p class="hero-card-kicker">Explore, Read, and</p>
+            <h2 class="hero-card-title">ENJOY</h2>
+            <button id="hero-start" class="hero-card-cta" type="button">
+              <span>Let's Explore</span>
+              <span class="hero-card-arrow">↗</span>
+            </button>
+          </article>
+
+          <article class="hero-card hero-card-complete">
+            <p class="hero-card-kicker">Complete</p>
+            <div class="hero-card-stat">
+              <strong>120</strong>
+              <span>Episodes Read</span>
+            </div>
+          </article>
+
+          <article class="hero-card hero-card-market">
+            <div class="hero-card-stat">
+              <strong>350</strong>
+              <span>Contracts Read</span>
+            </div>
+          </article>
+
+          <article class="hero-card hero-card-watch">
+            <p class="hero-card-kicker">Stream Anime and</p>
+            <h2 class="hero-card-title">ENJOY</h2>
+            <a href="https://github.com/mariomarildo666-cmd/sakura" target="_blank" rel="noreferrer" class="hero-card-cta">
+              <span>Watch</span>
+              <span class="hero-card-arrow">↗</span>
+            </a>
+          </article>
+        </div>
+
+        <section id="history-shell" class="hero-history hidden">
+          <div class="hero-history-head">
+            <p class="hero-history-title">Recent Searches</p>
+          </div>
+          <div id="history-list" class="hero-history-list"></div>
+        </section>
+
+        <p id="status" class="status" aria-live="polite"></p>
       </section>
 
       <section id="result" class="result hidden">
