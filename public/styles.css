@@ -23,41 +23,11 @@ body {
   font-family: "M PLUS Rounded 1c", "Noto Sans JP", sans-serif;
   color: var(--text);
   background:
-    radial-gradient(circle at top left, rgba(255, 209, 227, 0.82), transparent 24%),
-    radial-gradient(circle at 84% 10%, rgba(255, 235, 199, 0.52), transparent 18%),
-    radial-gradient(circle at bottom right, rgba(228, 205, 255, 0.34), transparent 24%),
-    linear-gradient(180deg, #fffdfd 0%, #fff6f9 48%, #fffdf8 100%);
+    radial-gradient(circle at top left, rgba(255, 221, 232, 0.78), transparent 24%),
+    radial-gradient(circle at 84% 10%, rgba(255, 233, 184, 0.44), transparent 18%),
+    radial-gradient(circle at bottom right, rgba(232, 214, 255, 0.28), transparent 22%),
+    linear-gradient(180deg, #f6efe7 0%, #f8f1eb 34%, #f6eef4 100%);
   overflow-x: hidden;
-}
-
-.scene-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.scene-backdrop::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(180deg, rgba(255, 246, 240, 0.24), rgba(255, 248, 251, 0.38)),
-    radial-gradient(circle at center, rgba(255, 248, 238, 0.04), rgba(255, 248, 238, 0.48) 72%);
-}
-
-.scene-backdrop-image {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: max(1320px, 100vw);
-  max-width: none;
-  min-height: 100vh;
-  object-fit: cover;
-  transform: translate(-50%, -50%) scale(1.06);
-  opacity: 0.6;
-  filter: blur(3px) saturate(1);
 }
 
 body::before,
@@ -1258,12 +1228,6 @@ h1 {
 
   .hero-sakura {
     width: min(100%, 320px);
-  }
-
-  .scene-backdrop-image {
-    width: 1000px;
-    transform: translate(-50%, -50%) scale(1.1);
-    opacity: 0.52;
   }
 
   #market-grid {
