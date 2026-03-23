@@ -537,6 +537,7 @@ body:has(#result.hidden) .shell {
 
 #overview-grid {
   grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.95fr);
+  align-items: start;
 }
 
 .overview-left,
@@ -576,7 +577,7 @@ body:has(#result.hidden) .shell {
 .overview-right .stat--contract,
 .overview-right .stat--creator,
 #market-grid .stat {
-  min-height: 118px;
+  min-height: 96px;
 }
 
 .overview-row-top .stat {
@@ -584,6 +585,10 @@ body:has(#result.hidden) .shell {
   flex-direction: column;
   justify-content: center;
   text-align: center;
+}
+
+.overview-row-social {
+  margin-bottom: 12px;
 }
 
 #market-grid .stat {
@@ -623,7 +628,7 @@ body:has(#result.hidden) .shell {
   align-items: center;
   justify-content: center;
   width: 100%;
-  min-height: 72px;
+  min-height: 56px;
   padding: 0 18px;
   border-radius: 18px;
   text-decoration: none;
