@@ -55,6 +55,7 @@ The web app currently includes:
 - market panel
 - raw payload inspector
 - recent searches visible to all visitors on the running service
+- X mention bot hooks for `@sakuraonbsc 0x...` style replies
 
 ## Stack
 
@@ -78,6 +79,12 @@ Fill `.env` with what you need:
 - `BSC_RPC_URL`
 - `OPENAI_API_KEY`
 - optional: `OPENAI_MODEL` default is `gpt-5.4-mini`
+- `X_BOT_USERNAME`
+- `X_BEARER_TOKEN`
+- `X_API_KEY`
+- `X_API_SECRET`
+- `X_ACCESS_TOKEN`
+- `X_ACCESS_TOKEN_SECRET`
 
 `token.json` is ignored locally so live launch configs stay private.
 
@@ -105,6 +112,24 @@ Run the website:
 
 ```bash
 npm start
+```
+
+Create a reply draft for a tagged CA:
+
+```bash
+npm run x-draft -- 0xYourContractAddress
+```
+
+Process mentions once:
+
+```bash
+npm run x-bot -- once
+```
+
+Run the mention bot loop:
+
+```bash
+npm run x-bot -- poll
 ```
 
 Open:
@@ -144,8 +169,10 @@ public/assets/           sakura art
 src/server.ts            web server + api routes
 src/launch.ts            Four.meme launcher
 src/ca.ts                CLI CA lookup
+src/x-bot.ts             X mention bot runner
 src/agents/sakura.ts     Sakura analysis logic
 src/lib/ca-lookup.ts     token aggregation + market discovery
+src/lib/x-bot.ts         X auth, mention polling, and reply posting
 ```
 
 ## Notes
@@ -154,6 +181,8 @@ src/lib/ca-lookup.ts     token aggregation + market discovery
 - the chart panel currently uses DexScreener embed
 - recent searches are global for the running service, but memory-based
 - if the server restarts, recent searches reset
+- the X bot stores its mention state in `.data/x-bot-state.json`
+- X replies are dry-run by default until `X_BOT_DRY_RUN=false`
 - Sakura is being shaped into a broader meme coin agent product over time
 
 ## Vibe

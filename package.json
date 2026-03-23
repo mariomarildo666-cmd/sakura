@@ -9,7 +9,9 @@
     "launch": "tsx src/launch.ts",
     "start": "tsx src/server.ts",
     "serve": "tsx src/server.ts",
-    "symbol-check": "tsx src/launch.ts symbol-check"
+    "symbol-check": "tsx src/launch.ts symbol-check",
+    "x-bot": "tsx src/x-bot.ts",
+    "x-draft": "tsx src/x-bot.ts draft"
   },
   "keywords": [],
   "author": "",
