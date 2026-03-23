@@ -17,131 +17,155 @@
     <div class="bg-orb bg-orb-b"></div>
     <div class="bg-grid"></div>
     <main class="shell">
-      <section class="hero">
-        <p class="eyebrow">FOUR.MEME CA LOOKUP</p>
-        <h1>Drop the CA into the blossom terminal.</h1>
-        <p class="subtitle">
-          Paste a BSC contract address and let Sakura unfold the profile, market shape, and launch
-          state in one sakura-themed screen.
-        </p>
+      <section class="dashboard">
+        <aside class="side-rail" aria-hidden="true">
+          <button class="rail-btn is-active" type="button">✿</button>
+          <button class="rail-btn" type="button">◌</button>
+          <button class="rail-btn" type="button">⌘</button>
+          <button class="rail-btn" type="button">◍</button>
+        </aside>
 
-        <form id="lookup-form" class="lookup-card">
-          <label class="sr-only" for="ca-input">Contract address</label>
-          <input
-            id="ca-input"
-            name="address"
-            type="text"
-            autocomplete="off"
-            spellcheck="false"
-            placeholder="0x..."
-          />
-          <button type="submit">Lookup</button>
-        </form>
-
-        <p id="status" class="status" aria-live="polite"></p>
-      </section>
-
-      <section id="result" class="result hidden">
-        <div id="hero-result" class="hero-result hidden">
-          <div id="logo-shell" class="logo-shell hidden">
-            <div class="logo-ring"></div>
-            <img id="token-logo" class="token-logo hidden" alt="Token logo" />
-          </div>
-          <div class="hero-meta">
-            <p id="result-name" class="result-name"></p>
-            <div class="action-row">
-              <button id="copy-ca" class="ghost-btn" type="button">Copy CA</button>
-              <a id="open-fourmeme" class="ghost-btn link-btn hidden" target="_blank" rel="noreferrer">Open Four.meme</a>
+        <div class="dashboard-panel">
+          <header class="topbar">
+            <div class="brand-block">
+              <p class="brand-kana">サクラターミナル</p>
+              <p class="brand-sub">Four.meme CA Intelligence</p>
             </div>
-          </div>
-        </div>
 
-        <div class="tabs" id="tabs">
-          <button class="tab-btn is-active" type="button" data-tab="overview">Overview</button>
-          <button class="tab-btn" type="button" data-tab="market">Market</button>
-          <button class="tab-btn" type="button" data-tab="raw">Raw</button>
-        </div>
+            <form id="lookup-form" class="lookup-card">
+              <label class="sr-only" for="ca-input">Contract address</label>
+              <input
+                id="ca-input"
+                name="address"
+                type="text"
+                autocomplete="off"
+                spellcheck="false"
+                placeholder="Search CA..."
+              />
+              <button type="submit">Lookup</button>
+            </form>
+          </header>
 
-        <div id="skeleton-grid" class="summary-grid hidden"></div>
-
-        <section class="tab-panel" id="panel-overview">
-          <div class="summary-grid" id="overview-grid"></div>
-          <section id="chart-shell" class="chart-shell hidden">
-            <div class="chart-head">
-              <div class="chart-head-main">
-                <p class="chart-title">Petal Chart</p>
-                <div class="chart-metrics">
-                  <div class="chart-metric">
-                    <span class="chart-metric-label">Price</span>
-                    <strong id="chart-price" class="chart-metric-value">-</strong>
-                  </div>
-                  <div class="chart-metric">
-                    <span class="chart-metric-label">Market Cap</span>
-                    <strong id="chart-marketcap" class="chart-metric-value">-</strong>
-                  </div>
-                  <div class="chart-metric">
-                    <span class="chart-metric-label">Liquidity</span>
-                    <strong id="chart-liquidity" class="chart-metric-value">-</strong>
-                  </div>
-                </div>
-              </div>
-              <div class="chart-actions">
-                <div class="chart-timeframes" id="chart-timeframes">
-                  <button class="timeframe-btn is-active" type="button" data-timeframe="5m">5m</button>
-                  <button class="timeframe-btn" type="button" data-timeframe="15m">15m</button>
-                  <button class="timeframe-btn" type="button" data-timeframe="1h">1h</button>
-                  <button class="timeframe-btn" type="button" data-timeframe="4h">4h</button>
-                  <button class="timeframe-btn" type="button" data-timeframe="1d">1d</button>
-                </div>
-                <a id="chart-link" class="chart-link" target="_blank" rel="noreferrer">Open Market</a>
-              </div>
+          <section class="hero">
+            <div class="hero-copy">
+              <p class="eyebrow">Sakura Blossom Terminal</p>
+              <h1>Immerse in Meme Market Reading</h1>
+              <p class="subtitle">
+                Drop a BSC contract address and let Sakura unfold the profile, chart, and launch
+                state inside one anime dashboard.
+              </p>
+              <p id="status" class="status" aria-live="polite"></p>
             </div>
-            <p id="chart-status" class="chart-status hidden"></p>
-            <div class="chart-frame-wrap">
-              <div id="chart-frame" class="chart-frame"></div>
+
+            <div class="hero-art">
+              <div class="hero-art-glow"></div>
+              <img src="/assets/sakura-neutral.png" alt="Sakura hero" class="hero-sakura" />
             </div>
           </section>
-          <section id="sakura-shell" class="sakura-shell hidden">
-            <div class="sakura-layout">
-              <div class="sakura-visual">
-                <div class="sakura-figure-shell">
-                  <img id="sakura-figure" class="sakura-figure" src="/assets/sakura-neutral.png" alt="Sakura" />
-                </div>
+
+          <section id="result" class="result hidden">
+            <div id="hero-result" class="hero-result hidden">
+              <div id="logo-shell" class="logo-shell hidden">
+                <div class="logo-ring"></div>
+                <img id="token-logo" class="token-logo hidden" alt="Token logo" />
               </div>
-              <div class="sakura-content">
-                <div class="sakura-head">
-                  <div>
-                    <p class="sakura-eyebrow">Sakura Agent</p>
-                    <h2 class="sakura-title">Trader Read</h2>
-                  </div>
-                  <div id="sakura-verdict" class="sakura-verdict">-</div>
-                </div>
-                <p id="sakura-summary" class="sakura-summary"></p>
-                <div class="sakura-grid">
-                  <article class="sakura-card">
-                    <p class="sakura-card-label">Why Sakura leans this way</p>
-                    <ul id="sakura-reasons" class="sakura-list"></ul>
-                  </article>
-                  <article class="sakura-card">
-                    <p class="sakura-card-label">Danger signals</p>
-                    <ul id="sakura-cautions" class="sakura-list"></ul>
-                  </article>
+              <div class="hero-meta">
+                <p id="result-name" class="result-name"></p>
+                <div class="action-row">
+                  <button id="copy-ca" class="ghost-btn" type="button">Copy CA</button>
+                  <a id="open-fourmeme" class="ghost-btn link-btn hidden" target="_blank" rel="noreferrer">Open Four.meme</a>
                 </div>
               </div>
             </div>
+
+            <div class="tabs" id="tabs">
+              <button class="tab-btn is-active" type="button" data-tab="overview">Overview</button>
+              <button class="tab-btn" type="button" data-tab="market">Market</button>
+              <button class="tab-btn" type="button" data-tab="raw">Raw</button>
+            </div>
+
+            <div id="skeleton-grid" class="summary-grid hidden"></div>
+
+            <section class="tab-panel" id="panel-overview">
+              <div class="summary-grid" id="overview-grid"></div>
+              <section id="chart-shell" class="chart-shell hidden">
+                <div class="chart-head">
+                  <div class="chart-head-main">
+                    <p class="chart-title">Petal Chart</p>
+                    <div class="chart-metrics">
+                      <div class="chart-metric">
+                        <span class="chart-metric-label">Price</span>
+                        <strong id="chart-price" class="chart-metric-value">-</strong>
+                      </div>
+                      <div class="chart-metric">
+                        <span class="chart-metric-label">Market Cap</span>
+                        <strong id="chart-marketcap" class="chart-metric-value">-</strong>
+                      </div>
+                      <div class="chart-metric">
+                        <span class="chart-metric-label">Liquidity</span>
+                        <strong id="chart-liquidity" class="chart-metric-value">-</strong>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="chart-actions">
+                    <div class="chart-timeframes" id="chart-timeframes">
+                      <button class="timeframe-btn is-active" type="button" data-timeframe="5m">5m</button>
+                      <button class="timeframe-btn" type="button" data-timeframe="15m">15m</button>
+                      <button class="timeframe-btn" type="button" data-timeframe="1h">1h</button>
+                      <button class="timeframe-btn" type="button" data-timeframe="4h">4h</button>
+                      <button class="timeframe-btn" type="button" data-timeframe="1d">1d</button>
+                    </div>
+                    <a id="chart-link" class="chart-link" target="_blank" rel="noreferrer">Open Market</a>
+                  </div>
+                </div>
+                <p id="chart-status" class="chart-status hidden"></p>
+                <div class="chart-frame-wrap">
+                  <div id="chart-frame" class="chart-frame"></div>
+                </div>
+              </section>
+              <section id="sakura-shell" class="sakura-shell hidden">
+                <div class="sakura-layout">
+                  <div class="sakura-visual">
+                    <div class="sakura-figure-shell">
+                      <img id="sakura-figure" class="sakura-figure" src="/assets/sakura-neutral.png" alt="Sakura" />
+                    </div>
+                  </div>
+                  <div class="sakura-content">
+                    <div class="sakura-head">
+                      <div>
+                        <p class="sakura-eyebrow">Sakura Agent</p>
+                        <h2 class="sakura-title">Trader Read</h2>
+                      </div>
+                      <div id="sakura-verdict" class="sakura-verdict">-</div>
+                    </div>
+                    <p id="sakura-summary" class="sakura-summary"></p>
+                    <div class="sakura-grid">
+                      <article class="sakura-card">
+                        <p class="sakura-card-label">Why Sakura leans this way</p>
+                        <ul id="sakura-reasons" class="sakura-list"></ul>
+                      </article>
+                      <article class="sakura-card">
+                        <p class="sakura-card-label">Danger signals</p>
+                        <ul id="sakura-cautions" class="sakura-list"></ul>
+                      </article>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </section>
+
+            <section class="tab-panel hidden" id="panel-market">
+              <div class="summary-grid" id="market-grid"></div>
+            </section>
+
+            <section class="tab-panel hidden" id="panel-raw">
+              <details class="raw is-open">
+                <summary>Raw response</summary>
+                <pre id="raw-output"></pre>
+              </details>
+            </section>
           </section>
-        </section>
-
-        <section class="tab-panel hidden" id="panel-market">
-          <div class="summary-grid" id="market-grid"></div>
-        </section>
-
-        <section class="tab-panel hidden" id="panel-raw">
-          <details class="raw is-open">
-            <summary>Raw response</summary>
-            <pre id="raw-output"></pre>
-          </details>
-        </section>
+        </div>
       </section>
     </main>
 
