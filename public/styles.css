@@ -32,8 +32,8 @@ body {
   font-family: var(--ui);
   color: var(--text);
   background:
-    radial-gradient(circle at 50% 50%, rgba(174, 16, 16, 0.16), transparent 44%),
-    linear-gradient(180deg, #8d1512 0%, #7a120f 40%, #5f0e0d 100%);
+    radial-gradient(circle at 50% 0%, rgba(174, 16, 16, 0.12), transparent 28%),
+    linear-gradient(180deg, #120606 0%, #090909 42%, #060606 100%);
   overflow-x: hidden;
 }
 
@@ -84,15 +84,15 @@ body::after {
   position: relative;
   z-index: 2;
   width: 100%;
-  max-width: 1440px;
+  max-width: 1660px;
   margin: 0 auto;
-  padding: 24px 22px 40px;
+  padding: 18px 12px 40px;
 }
 
 .landing-frame {
   position: relative;
   overflow: hidden;
-  width: min(1290px, 100%);
+  width: min(1560px, 100%);
   min-height: 820px;
   margin: 0 auto;
   padding: 10px 0 0;
