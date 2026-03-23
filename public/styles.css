@@ -226,8 +226,7 @@ body:has(#result.hidden) .shell {
 
 .hero-topbar-right {
   display: flex;
-  align-items: center;
-  gap: 16px;
+  justify-content: flex-end;
 }
 
 .hero-search {
@@ -269,38 +268,6 @@ body:has(#result.hidden) .shell {
   font-size: 17px;
   font-weight: 800;
   cursor: pointer;
-}
-
-.hero-user-strip {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--muted);
-  font-size: 16px;
-}
-
-.hero-user-icon {
-  width: 34px;
-  height: 34px;
-  display: grid;
-  place-items: center;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.56);
-}
-
-.hero-user-name {
-  font-weight: 700;
-}
-
-.hero-user-avatar {
-  width: 42px;
-  height: 42px;
-  display: grid;
-  place-items: center;
-  border-radius: 999px;
-  background: linear-gradient(180deg, #ffdadf, #f6adc7);
-  color: #6a3e4c;
-  font-weight: 800;
 }
 
 .hero-shell {
