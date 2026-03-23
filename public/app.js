@@ -128,7 +128,7 @@ timeframeButtons.forEach((button) => {
   button.addEventListener("click", () => {});
 });
 
-homeRail.addEventListener("click", (event) => {
+homeRail?.addEventListener("click", (event) => {
   event.preventDefault();
   resetHomeView();
 });
