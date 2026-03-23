@@ -72,18 +72,29 @@
                   <p class="hero-stage-label">Instant CA Check</p>
                   <p class="hero-stage-text">Paste a contract and let Sakura decide if this thing has actual send potential or just BSC larp energy.</p>
                 </div>
-                <form id="lookup-form" class="lookup-card hero-lookup">
-                  <label class="sr-only" for="ca-input">Contract address</label>
-                  <input
-                    id="ca-input"
-                    name="address"
-                    type="text"
-                    autocomplete="off"
-                    spellcheck="false"
-                    placeholder="Search CA..."
-                  />
-                  <button type="submit">Lookup</button>
-                </form>
+                <div class="lookup-shell">
+                  <div class="lookup-shell-head">
+                    <span class="lookup-shell-label">Contract Terminal</span>
+                    <span class="lookup-shell-pill">BSC / CA</span>
+                  </div>
+                  <form id="lookup-form" class="lookup-card hero-lookup">
+                    <label class="sr-only" for="ca-input">Contract address</label>
+                    <input
+                      id="ca-input"
+                      name="address"
+                      type="text"
+                      autocomplete="off"
+                      spellcheck="false"
+                      placeholder="Search CA..."
+                    />
+                    <button type="submit">Lookup</button>
+                  </form>
+                  <div class="lookup-shell-foot">
+                    <span class="lookup-foot-note">Paste any Four.meme token CA</span>
+                    <span class="lookup-foot-dot"></span>
+                    <span class="lookup-foot-note">Fast Sakura read</span>
+                  </div>
+                </div>
                 <div class="hero-stage-art">
                   <div class="hero-art-glow"></div>
                   <img src="/assets/sakura-neutral.png" alt="Sakura hero" class="hero-sakura" />
