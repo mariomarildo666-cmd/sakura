@@ -20,6 +20,7 @@ const sakuraShell = document.querySelector("#sakura-shell");
 const sakuraFigure = document.querySelector("#sakura-figure");
 const sakuraVerdict = document.querySelector("#sakura-verdict");
 const sakuraSummary = document.querySelector("#sakura-summary");
+const sakuraScorecard = document.querySelector("#sakura-scorecard");
 const sakuraReasons = document.querySelector("#sakura-reasons");
 const sakuraCautions = document.querySelector("#sakura-cautions");
 const chartShell = document.querySelector("#chart-shell");
@@ -177,6 +178,7 @@ async function renderSakura(address) {
   setSakuraFigure("neutral");
   sakuraSummary.textContent =
     "Sakura is staring at the candles and deciding whether this thing belongs on the timeline or in the mute list.";
+  sakuraScorecard.innerHTML = "";
   sakuraReasons.innerHTML = "";
   sakuraCautions.innerHTML = "";
 
@@ -198,6 +200,7 @@ async function renderSakura(address) {
     sakuraShell.classList.add(analysis.verdict === "bullish" ? "is-bullish" : "is-bearish");
     setSakuraFigure(analysis.verdict === "bullish" ? "bullish" : "bearish");
     sakuraSummary.textContent = agent.answer || analysis.summary;
+    renderSakuraScorecard(analysis.scorecard);
     fillSakuraList(sakuraReasons, analysis.reasons, "Sakura does not see enough clean bullish signals yet.");
     fillSakuraList(sakuraCautions, analysis.cautions, "No major danger signal is visible right now.");
   } catch (error) {
@@ -205,8 +208,31 @@ async function renderSakura(address) {
     sakuraShell.classList.remove("is-bullish", "is-bearish");
     setSakuraFigure("neutral");
     sakuraSummary.textContent = error instanceof Error ? error.message : "Sakura analysis failed.";
+    sakuraScorecard.innerHTML = "";
     fillSakuraList(sakuraReasons, [], "No analysis points available.");
     fillSakuraList(sakuraCautions, [], "No caution points available.");
+  }
+}
+
+function renderSakuraScorecard(scorecard) {
+  if (!sakuraScorecard) return;
+
+  const entries = [
+    ["Name Vibe", scorecard?.nameVibe ?? 0],
+    ["Social Heat", scorecard?.socialHeat ?? 0],
+    ["Chart Heat", scorecard?.chartHeat ?? 0],
+    ["Danger", scorecard?.danger ?? 0],
+  ];
+
+  sakuraScorecard.innerHTML = "";
+  for (const [label, value] of entries) {
+    const chip = document.createElement("div");
+    chip.className = "sakura-score-chip";
+    chip.innerHTML = `
+      <span class="sakura-score-label">${escapeHtml(label)}</span>
+      <strong class="sakura-score-value">${formatMiniScore(value)}</strong>
+    `;
+    sakuraScorecard.appendChild(chip);
   }
 }
 
@@ -436,6 +462,12 @@ function formatCompactMoney(value) {
     notation: "compact",
     maximumFractionDigits: 2,
   }).format(number);
+}
+
+function formatMiniScore(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return "0";
+  return number > 0 ? `+${number}` : String(number);
 }
 
 function applyMetricTone(item, label) {

@@ -9,6 +9,12 @@ type SakuraResult = {
   confidence: number | null;
   persona: string;
   summary: string;
+  scorecard: {
+    nameVibe: number;
+    socialHeat: number;
+    chartHeat: number;
+    danger: number;
+  };
   market: {
     priceUsd: number | null;
     marketCap: number | null;
@@ -28,6 +34,7 @@ type SakuraLlmPayload = {
   reasons?: unknown;
   cautions?: unknown;
   confidence?: unknown;
+  scorecard?: unknown;
 };
 
 const SAKURA_PERSONA =
@@ -71,12 +78,16 @@ async function analyzeWithHuggingFace(
         content: [
           "You are Sakura, a cute anime shitcoin trader with degen instincts.",
           "You analyze BSC meme coins and must stay grounded in the supplied data only.",
-          "Talk like a sharp meme trader, not like a risk committee.",
+          "Talk like a sharp, terminally online shitcoin trader. Sound casual, punchy, and a little degen.",
           "Focus on trend, meme energy, ticker and name quality, social fuel, chart mood, and whether the coin feels easy to shill.",
+          "Do not sound corporate, academic, or generic.",
           "Do not talk about liquidity unless it is absolutely necessary.",
           "A little playful absurdity is good, but do not invent facts.",
+          "Always comment on the name or ticker vibe if possible.",
+          "Always include at least one observation about chart heat or social heat.",
+          "Use short trader phrasing like timeline bait, clean ticker, cooked chart, weak sauce, farmable, dead feed, easy shill, chop, or no juice when it fits the data.",
           "Return a raw JSON object only. No markdown. No code fences.",
-          'Use this exact shape: {"verdict":"bullish","summary":"string","reasons":["..."],"cautions":["..."],"confidence":0.0}',
+          'Use this exact shape: {"verdict":"bullish","summary":"string","reasons":["..."],"cautions":["..."],"confidence":0.0,"scorecard":{"nameVibe":0,"socialHeat":0,"chartHeat":0,"danger":0}}',
           'The verdict field must be exactly one literal value: either "bullish" or "bearish". Never output placeholders like "bullish|bearish".',
           "Keep summary to one short paragraph.",
           "Reasons and cautions must each contain 2 to 4 concise strings.",
@@ -121,6 +132,7 @@ async function analyzeWithHuggingFace(
               summary: heuristic.summary,
               reasons: heuristic.reasons,
               cautions: heuristic.cautions,
+              scorecard: heuristic.scorecard,
             },
           },
           null,
@@ -176,6 +188,7 @@ async function analyzeWithHuggingFace(
       reasons: parsed.reasons,
       cautions: parsed.cautions,
       confidence: parsed.confidence,
+      scorecard: parsed.scorecard,
       engine: "huggingface" as const,
       model,
     };
@@ -198,61 +211,83 @@ function analyzeHeuristically(
   const priceUsd = Number(lookup.dexScreener?.priceUsd || 0);
   const candleSummary = summarizeCandles(candles);
   const vibe = scoreNameVibe(lookup.summary.name, lookup.summary.symbol, lookup.summary.description);
+  let nameVibe = 0;
+  let socialHeat = 0;
+  let chartHeat = 0;
+  let danger = 0;
 
   if (vibe.score >= 2) {
     score += 2;
+    nameVibe += 2;
     reasons.push(vibe.reason || "name and ticker have decent meme memory");
   } else if (vibe.score <= -1) {
     score -= 1;
+    nameVibe -= 1;
+    danger += 1;
     cautions.push(vibe.caution || "name and ticker feel hard to push on the timeline");
   }
 
   if (lookup.summary.aiCreator) {
     score += 1;
+    socialHeat += 1;
     reasons.push("AI angle still farms attention in this lane");
   }
 
   if (marketCap >= 50000) {
     score += 1;
+    chartHeat += 1;
     reasons.push("market cap is big enough to feel like a real rotation candidate");
   } else if (marketCap > 0 && marketCap < 10000) {
     score -= 1;
+    danger += 1;
     cautions.push("market cap is still micro enough to feel one wallet away from chaos");
   }
 
   if (lookup.summary.website && (lookup.summary.twitter || lookup.summary.telegram)) {
     score += 1;
+    socialHeat += 2;
     reasons.push("there is enough social surface to give the coin some timeline fuel");
   } else if (!lookup.summary.website && !lookup.summary.twitter && !lookup.summary.telegram) {
     score -= 1;
+    socialHeat -= 2;
+    danger += 1;
     cautions.push("the social shell is thin, so the narrative may die in the feed");
   }
 
   if (candleSummary.changePct >= 8) {
     score += 2;
+    chartHeat += 2;
     reasons.push("chart is printing enough green to wake up the trend chasers");
   } else if (candleSummary.changePct <= -8) {
     score -= 2;
+    chartHeat -= 2;
+    danger += 2;
     cautions.push("chart is bleeding and the vibe is starting to smell like exit liquidity");
   }
 
   if (candleSummary.greenRatio >= 0.58) {
     score += 1;
+    chartHeat += 1;
     reasons.push("recent candles still look like buyers are steering the meme");
   } else if (candleSummary.greenRatio <= 0.42) {
     score -= 1;
+    chartHeat -= 1;
+    danger += 1;
     cautions.push("recent candles look like sellers are farming the bounce");
   }
 
   if (candleSummary.volatilityPct >= 35 && liquidityUsd > 0) {
+    danger += 1;
     cautions.push("the move is spicy enough to nuke late entries if the crowd apes too hard");
   }
 
   if (priceUsd > 0 && priceUsd < 0.00001) {
+    nameVibe += 1;
     reasons.push("tiny unit bias can still bait the classic cheap-coin crowd");
   }
 
   if (!lookup.summary.liquidityAdded) {
+    danger += 1;
     cautions.push("the coin still feels pre-chaos rather than post-send");
   }
 
@@ -269,6 +304,12 @@ function analyzeHeuristically(
     confidence: null,
     persona: SAKURA_PERSONA,
     summary,
+    scorecard: {
+      nameVibe,
+      socialHeat,
+      chartHeat,
+      danger,
+    },
     market: {
       priceUsd: Number.isFinite(priceUsd) ? priceUsd : null,
       marketCap: Number.isFinite(marketCap) ? marketCap : null,
@@ -291,6 +332,7 @@ function normalizeLlmResult(content: string, fallbackVerdict: SakuraVerdict) {
     const reasons = sanitizeStringList(payload.reasons);
     const cautions = sanitizeStringList(payload.cautions);
     const confidence = clampConfidence(payload.confidence);
+    const scorecard = normalizeScorecard(payload.scorecard);
 
     if (!summary || reasons.length === 0 || cautions.length === 0) {
       return null;
@@ -302,6 +344,7 @@ function normalizeLlmResult(content: string, fallbackVerdict: SakuraVerdict) {
       reasons: reasons.slice(0, 4),
       cautions: cautions.slice(0, 4),
       confidence,
+      scorecard,
     };
   } catch {
     return null;
@@ -326,6 +369,22 @@ function clampConfidence(value: unknown) {
   const number = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
   if (!Number.isFinite(number)) return null;
   return Math.max(0, Math.min(1, number));
+}
+
+function normalizeScorecard(value: unknown) {
+  const raw = typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
+  return {
+    nameVibe: clampMiniScore(raw.nameVibe),
+    socialHeat: clampMiniScore(raw.socialHeat),
+    chartHeat: clampMiniScore(raw.chartHeat),
+    danger: clampMiniScore(raw.danger),
+  };
+}
+
+function clampMiniScore(value: unknown) {
+  const number = typeof value === "number" ? value : typeof value === "string" ? Number(value) : 0;
+  if (!Number.isFinite(number)) return 0;
+  return Math.max(-2, Math.min(2, Math.round(number)));
 }
 
 function summarizeCandles(candles: Array<{ open: number; high: number; low: number; close: number }>) {
