@@ -1103,8 +1103,8 @@ h1 {
 }
 
 .timeframe-btn:disabled {
-  cursor: wait;
-  opacity: 0.55;
+  cursor: default;
+  opacity: 0.38;
   transform: none;
 }
 
@@ -1134,6 +1134,15 @@ h1 {
   display: block;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 246, 250, 0.98));
+}
+
+.chart-embed {
+  width: 100%;
+  height: 100%;
+  min-height: 560px;
+  border: 0;
+  display: block;
+  background: #ffffff;
 }
 
 .skeleton {
