@@ -89,63 +89,102 @@
       </section>
 
       <section id="result" class="result hidden">
-        <div id="hero-result" class="hero-result hidden">
-          <div id="logo-shell" class="logo-shell hidden">
-            <div class="logo-ring"></div>
-            <img id="token-logo" class="token-logo hidden" alt="Token logo" />
-          </div>
-          <div class="hero-meta">
-            <p id="result-name" class="result-name"></p>
-            <div class="action-row">
-              <button id="copy-ca" class="ghost-btn" type="button">Copy CA</button>
-              <button id="copy-link" class="ghost-btn" type="button">Copy Link</button>
-              <a id="open-fourmeme" class="ghost-btn link-btn hidden" target="_blank" rel="noreferrer">Open Four.meme</a>
-            </div>
-          </div>
-        </div>
-
-        <div class="tabs" id="tabs">
-          <button class="tab-btn is-active" type="button" data-tab="overview">Overview</button>
-          <button class="tab-btn" type="button" data-tab="market">Market</button>
-          <button class="tab-btn" type="button" data-tab="raw">Raw</button>
-        </div>
-
         <div id="skeleton-grid" class="summary-grid hidden"></div>
 
-        <section class="tab-panel" id="panel-overview">
-          <div class="summary-grid" id="overview-grid"></div>
-
-          <section id="sakura-shell" class="sakura-shell hidden">
-            <div class="sakura-layout">
-              <div class="sakura-visual">
-                <div class="sakura-figure-shell">
-                  <img id="sakura-figure" class="sakura-figure" src="/assets/sakura-neutral.png" alt="Sakura" />
-                </div>
-              </div>
-              <div class="sakura-content">
-                <div class="sakura-head">
-                  <div>
-                    <p class="sakura-eyebrow">Sakura Agent</p>
-                    <h2 class="sakura-title">Trader Read</h2>
-                  </div>
-                  <div id="sakura-verdict" class="sakura-verdict">-</div>
-                </div>
-                <div class="sakura-bubble">
-                  <p id="sakura-summary" class="sakura-summary"></p>
-                </div>
-                <div class="sakura-grid">
-                  <article class="sakura-card">
-                    <p class="sakura-card-label">Why Sakura would ape</p>
-                    <ul id="sakura-reasons" class="sakura-list"></ul>
-                  </article>
-                  <article class="sakura-card">
-                    <p class="sakura-card-label">Why Sakura would fade</p>
-                    <ul id="sakura-cautions" class="sakura-list"></ul>
-                  </article>
-                </div>
+        <section class="token-page">
+          <div id="hero-result" class="token-header hidden">
+            <div id="logo-shell" class="token-header-logo hidden">
+              <div class="logo-ring"></div>
+              <img id="token-logo" class="token-logo hidden" alt="Token logo" />
+            </div>
+            <div class="token-header-copy">
+              <p class="token-header-eyebrow">Sakura Agent Terminal</p>
+              <p id="result-name" class="result-name"></p>
+              <div class="action-row">
+                <button id="copy-ca" class="ghost-btn" type="button">Copy CA</button>
+                <button id="copy-link" class="ghost-btn" type="button">Copy Link</button>
+                <a id="open-fourmeme" class="ghost-btn link-btn hidden" target="_blank" rel="noreferrer">Open Four.meme</a>
               </div>
             </div>
-          </section>
+          </div>
+
+          <div class="token-layout">
+            <div class="token-left">
+              <div class="token-stats-grid">
+                <article class="token-card token-stat-card">
+                  <p class="token-card-label">Name</p>
+                  <p id="stat-name" class="token-card-value">-</p>
+                </article>
+                <article class="token-card token-stat-card">
+                  <p class="token-card-label">Ticker</p>
+                  <p id="stat-symbol" class="token-card-value">-</p>
+                </article>
+                <article class="token-card token-stat-card">
+                  <p class="token-card-label">AI Creator</p>
+                  <p id="stat-ai" class="token-card-value">-</p>
+                </article>
+              </div>
+
+              <div class="token-social-grid">
+                <a id="social-website" class="token-social-btn is-missing" href="#" target="_blank" rel="noreferrer">Website</a>
+                <a id="social-twitter" class="token-social-btn is-missing" href="#" target="_blank" rel="noreferrer">Twitter</a>
+                <a id="social-telegram" class="token-social-btn is-missing" href="#" target="_blank" rel="noreferrer">Telegram</a>
+              </div>
+
+              <div class="token-address-stack">
+                <article class="token-card token-address-card">
+                  <div class="token-address-head">
+                    <p class="token-card-label">Contract</p>
+                    <button id="copy-contract-inline" class="address-copy-btn" type="button">Copy</button>
+                  </div>
+                  <p id="contract-address" class="token-address-value">-</p>
+                </article>
+
+                <article class="token-card token-address-card">
+                  <div class="token-address-head">
+                    <p class="token-card-label">Creator</p>
+                    <button id="copy-creator-inline" class="address-copy-btn" type="button">Copy</button>
+                  </div>
+                  <p id="creator-address" class="token-address-value">-</p>
+                </article>
+              </div>
+            </div>
+
+            <div class="token-right">
+              <section id="sakura-shell" class="sakura-shell hidden">
+                <div class="sakura-layout premium">
+                  <div class="sakura-visual premium">
+                    <div class="sakura-stage-glow"></div>
+                    <div class="sakura-figure-shell premium">
+                      <img id="sakura-figure" class="sakura-figure premium" src="/assets/sakura-neutral.png" alt="Sakura" />
+                    </div>
+                  </div>
+                  <div class="sakura-content premium">
+                    <div class="sakura-head premium">
+                      <div>
+                        <p class="sakura-eyebrow">Sakura Agent</p>
+                        <h2 class="sakura-title">Trader Read</h2>
+                      </div>
+                      <div id="sakura-verdict" class="sakura-verdict">-</div>
+                    </div>
+                    <div class="sakura-bubble premium">
+                      <p id="sakura-summary" class="sakura-summary"></p>
+                    </div>
+                    <div class="sakura-grid premium">
+                      <article class="sakura-card premium">
+                        <p class="sakura-card-label">Why Sakura would ape</p>
+                        <ul id="sakura-reasons" class="sakura-list"></ul>
+                      </article>
+                      <article class="sakura-card premium">
+                        <p class="sakura-card-label">Why Sakura would fade</p>
+                        <ul id="sakura-cautions" class="sakura-list"></ul>
+                      </article>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </div>
 
           <section id="chart-shell" class="chart-shell hidden">
             <div class="chart-head">
@@ -187,14 +226,12 @@
               <div id="chart-frame" class="chart-frame"></div>
             </div>
           </section>
-        </section>
 
-        <section class="tab-panel hidden" id="panel-market">
-          <div class="summary-grid" id="market-grid"></div>
-        </section>
+          <section class="token-market">
+            <div class="summary-grid" id="market-grid"></div>
+          </section>
 
-        <section class="tab-panel hidden" id="panel-raw">
-          <details class="raw is-open">
+          <details class="raw">
             <summary>Raw response</summary>
             <pre id="raw-output"></pre>
           </details>
