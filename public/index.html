@@ -20,50 +20,34 @@
     <main class="shell">
       <section class="landing-frame">
         <header class="hero-topbar">
+          <a href="/" class="hero-brand" aria-label="Sakura Terminal home">理解</a>
+
           <nav class="hero-links hero-links-left" aria-label="Primary">
-            <a href="/" class="hero-link">About</a>
-            <a href="https://github.com/mariomarildo666-cmd/sakura" target="_blank" rel="noreferrer" class="hero-link">Marketplace</a>
-            <a href="https://x.com/" target="_blank" rel="noreferrer" class="hero-link">Staking</a>
+            <a href="/" class="hero-link">My List</a>
+            <a href="https://github.com/mariomarildo666-cmd/sakura" target="_blank" rel="noreferrer" class="hero-link">Series</a>
+            <a href="#result" class="hero-link">Movies</a>
+            <a href="#panel-overview" class="hero-link">Mangas</a>
+            <a href="https://x.com/" target="_blank" rel="noreferrer" class="hero-link">Specials (OVAs)</a>
+            <a href="#panel-market" class="hero-link">Seasonals</a>
           </nav>
 
-          <div class="hero-mark">
-            <p class="hero-mark-title">SAKURA TERMINAL</p>
-            <p class="hero-mark-sub">BSC MEME READ ENGINE</p>
-          </div>
-
           <nav class="hero-links hero-links-right" aria-label="Secondary">
-            <a href="#result" class="hero-link">Play To Earn</a>
-            <a href="#panel-overview" class="hero-link">Guides</a>
-            <a href="https://github.com/mariomarildo666-cmd/sakura" target="_blank" rel="noreferrer" class="hero-link">FAQ</a>
+            <a href="https://x.com/" target="_blank" rel="noreferrer" class="hero-link">Login</a>
+            <a href="https://github.com/mariomarildo666-cmd/sakura" target="_blank" rel="noreferrer" class="hero-account">Create Account</a>
           </nav>
         </header>
 
         <div class="hero-shell">
           <div class="hero-copy">
-            <p class="hero-index">01/06</p>
-            <h1 class="hero-title">PLAY TO READ<br />MEME COIN<br />SIGNALS</h1>
-            <p class="hero-subtitle">BSC contract reads. Sakura verdicts. Anime terminal energy.</p>
+            <p class="hero-index">LIVE TERMINAL</p>
+            <h1 class="hero-title">Vast Universe Of Meme Coins,<br />Offering An Unfiltered Read<br />Right At Your Fingertips.</h1>
+            <p class="hero-subtitle">Search any BSC contract and let Sakura break down the vibe, socials, chart, and launch state without the fake polished AI tone.</p>
 
             <div class="hero-cta-row">
-              <button id="hero-start" class="hero-start-btn" type="button">START NOW</button>
-              <div class="hero-socials" aria-label="Social links">
-                <a href="https://x.com/" target="_blank" rel="noreferrer" class="hero-social">X</a>
-                <a href="https://github.com/mariomarildo666-cmd/sakura" target="_blank" rel="noreferrer" class="hero-social">GH</a>
-                <button class="hero-social" type="button" aria-label="Sakura">SA</button>
-              </div>
+              <button id="hero-start" class="hero-start-btn" type="button">Explore Categories</button>
+              <a href="https://github.com/mariomarildo666-cmd/sakura" target="_blank" rel="noreferrer" class="hero-secondary-btn">Sign Up</a>
             </div>
 
-            <section id="history-shell" class="hero-history hidden">
-              <div class="hero-history-head">
-                <p class="hero-history-title">Recent Searches</p>
-              </div>
-              <div id="history-list" class="hero-history-list"></div>
-            </section>
-
-            <p id="status" class="status" aria-live="polite"></p>
-          </div>
-
-          <div class="hero-stage">
             <form id="lookup-form" class="hero-search">
               <label class="sr-only" for="ca-input">Contract address</label>
               <input
@@ -77,10 +61,27 @@
               <button type="submit">Lookup</button>
             </form>
 
+            <section id="history-shell" class="hero-history hidden">
+              <div class="hero-history-head">
+                <p class="hero-history-title">Recent Searches</p>
+              </div>
+              <div id="history-list" class="hero-history-list"></div>
+            </section>
+
+            <p id="status" class="status" aria-live="polite"></p>
+          </div>
+
+          <div class="hero-stage">
             <div class="hero-character-wrap">
-              <div class="hero-character-glow"></div>
+              <div class="hero-character-backdrop"></div>
               <div class="hero-character-panel"></div>
-              <img src="/assets/sakura-neutral.png" alt="Sakura hero" class="hero-character" />
+              <div class="hero-character-frame">
+                <div class="hero-character-image"></div>
+              </div>
+              <div class="hero-stage-arrows" aria-hidden="true">
+                <button type="button" class="hero-arrow">←</button>
+                <button type="button" class="hero-arrow">→</button>
+              </div>
             </div>
           </div>
         </div>
