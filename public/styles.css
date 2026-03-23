@@ -197,24 +197,15 @@ body::after {
   position: relative;
   z-index: 1;
   display: grid;
-  gap: 22px;
+  grid-template-columns: minmax(0, 1.05fr) minmax(340px, 0.95fr);
+  gap: 24px;
+  align-items: center;
   min-height: 420px;
   padding: 24px 0 10px;
 }
 
 .hero-copy {
-  max-width: 760px;
-}
-
-.hero-stage {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(340px, 430px);
-  gap: 28px;
-  align-items: center;
-}
-
-.hero-search {
-  max-width: 620px;
+  max-width: 520px;
 }
 
 .hero-art {
@@ -1178,15 +1169,12 @@ h1 {
   }
 
   .hero {
+    grid-template-columns: 1fr;
     min-height: auto;
   }
 
   .hero-copy {
     max-width: none;
-  }
-
-  .hero-stage {
-    grid-template-columns: 1fr;
   }
 
   .hero-art {
