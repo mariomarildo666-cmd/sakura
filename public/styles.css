@@ -216,24 +216,23 @@ body::after {
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: minmax(0, 0.92fr) minmax(360px, 1.08fr);
-  gap: 0;
+  grid-template-columns: minmax(0, 1.05fr) minmax(340px, 0.95fr);
+  gap: 8px;
   align-items: center;
   min-height: 420px;
   padding: 24px 0 10px;
 }
 
 .hero-copy {
-  max-width: 500px;
-  padding-right: 0;
+  max-width: 520px;
+  padding-right: 8px;
 }
 
 .hero-art {
   position: relative;
   min-height: 360px;
   display: grid;
-  place-items: end start;
-  margin-left: -24px;
+  place-items: end center;
 }
 
 .hero-art-glow {
