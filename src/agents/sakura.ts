@@ -181,12 +181,19 @@ async function analyzeWithHuggingFace(
       return null;
     }
 
+    const reasons = finalizeInsights(parsed.reasons, buildReasonFallbacks(heuristic));
+    const cautions = finalizeInsights(parsed.cautions, buildCautionFallbacks(heuristic));
+    if (!reasons.length || !cautions.length) {
+      console.error(`[sakura:hf] weak insight set ${content}`);
+      return null;
+    }
+
     return {
       ...heuristic,
       verdict: parsed.verdict,
       summary: parsed.summary,
-      reasons: parsed.reasons,
-      cautions: parsed.cautions,
+      reasons,
+      cautions,
       confidence: parsed.confidence,
       scorecard: parsed.scorecard,
       engine: "huggingface" as const,
@@ -362,7 +369,10 @@ function extractJsonObject(content: string) {
 
 function sanitizeStringList(value: unknown) {
   if (!Array.isArray(value)) return [];
-  return value.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
+  return value
+    .filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+    .map((item) => normalizeInsightText(item))
+    .filter(Boolean);
 }
 
 function clampConfidence(value: unknown) {
@@ -457,4 +467,130 @@ function scoreNameVibe(name: string | null, symbol: string | null, description: 
   }
 
   return { score, reason, caution };
+}
+
+function normalizeInsightText(text: string) {
+  return text
+    .replace(/\s+/g, " ")
+    .replace(/\bgreenRatio\b/gi, "")
+    .replace(/\bsampleSize\b/gi, "")
+    .replace(/\bvolatilityPct\b/gi, "")
+    .replace(/\bchangePct\b/gi, "")
+    .replace(/\s+,/g, ",")
+    .trim();
+}
+
+function isWeakInsight(text: string) {
+  const normalized = text.trim().toLowerCase();
+  if (!normalized) return true;
+
+  const bannedFragments = [
+    "greenratio",
+    "samplesize",
+    "volatilitypct",
+    "changepct",
+    "exactly",
+    "0.5",
+    "somewhat stable",
+    "price seems",
+    "indicating a mostly flat candle set",
+    "flat candle set",
+    "at this point",
+    "looks okay",
+    "pretty decent",
+    "kind of",
+    "sort of",
+  ];
+
+  if (bannedFragments.some((fragment) => normalized.includes(fragment))) {
+    return true;
+  }
+
+  if (/\b\d+(\.\d+)?\b/.test(normalized) && !/\b\d+x\b/.test(normalized)) {
+    return true;
+  }
+
+  if (normalized.length < 18) {
+    return true;
+  }
+
+  return false;
+}
+
+function finalizeInsights(items: string[], fallback: string[]) {
+  const final: string[] = [];
+  const seen = new Set<string>();
+
+  for (const item of [...items, ...fallback]) {
+    const normalized = normalizeInsightText(item);
+    const key = normalized.toLowerCase();
+    if (!normalized || isWeakInsight(normalized) || seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    final.push(normalized);
+    if (final.length >= 4) break;
+  }
+
+  return final;
+}
+
+function buildReasonFallbacks(result: SakuraResult) {
+  const reasons: string[] = [];
+  const { scorecard, market } = result;
+
+  if (scorecard.nameVibe > 0) {
+    reasons.push("name and ticker have enough timeline bait to feel easy to shill");
+  }
+
+  if (scorecard.socialHeat > 0) {
+    reasons.push("social shell has enough pulse to give this thing some feed momentum");
+  }
+
+  if (scorecard.chartHeat > 1 || market.changePct1h > 6) {
+    reasons.push("chart still has heat, so momentum chasers can actually notice it");
+  } else if (scorecard.chartHeat > 0) {
+    reasons.push("buyers still have a little control, so this is not fully cooked yet");
+  }
+
+  if (market.marketCap && market.marketCap >= 50000) {
+    reasons.push("market cap is big enough to feel like a live rotation instead of a ghost launch");
+  }
+
+  if (market.priceUsd && market.priceUsd > 0 && market.priceUsd < 0.00001) {
+    reasons.push("tiny unit bias can still bait the cheap-coin crowd into a fast ape");
+  }
+
+  return reasons.length ? reasons : result.reasons;
+}
+
+function buildCautionFallbacks(result: SakuraResult) {
+  const cautions: string[] = [];
+  const { scorecard, market } = result;
+
+  if (scorecard.danger > 1) {
+    cautions.push("this setup still smells like it can turn into exit liquidity fast");
+  }
+
+  if (scorecard.socialHeat < 0) {
+    cautions.push("social presence feels dead, so the meme may never get enough timeline juice");
+  }
+
+  if (scorecard.chartHeat < 0 || market.changePct1h < -6) {
+    cautions.push("chart looks cooked right now, so late apes could get farmed on the bounce");
+  }
+
+  if (scorecard.nameVibe < 0) {
+    cautions.push("branding has weak sauce, so this is harder to push in chat than it should be");
+  }
+
+  if (!result.market.liquidityUsd && result.market.marketCap === null) {
+    cautions.push("there is still not enough live market proof to trust the send");
+  }
+
+  if (result.cautions.some((item) => item.toLowerCase().includes("pre-chaos"))) {
+    cautions.push("this still feels pre-chaos, not post-send");
+  }
+
+  return cautions.length ? cautions : result.cautions;
 }
