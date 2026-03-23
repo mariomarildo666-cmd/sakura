@@ -36,7 +36,7 @@ It is part launcher, part CA intelligence tool, part anime trader product.
 - CA lookup from Four.meme REST + on-chain token info
 - DexScreener pair discovery
 - DexScreener chart embed inside the app
-- Sakura verdicts with OpenAI first, heuristic fallback second
+- Sakura verdicts with Hugging Face first, heuristic fallback second
 - recent global searches shown inside the UI
 - shareable lookup URLs via `?ca=...`
 
@@ -77,8 +77,8 @@ Fill `.env` with what you need:
 
 - `PRIVATE_KEY`
 - `BSC_RPC_URL`
-- `OPENAI_API_KEY`
-- optional: `OPENAI_MODEL` default is `gpt-5.4-mini`
+- `HF_API_KEY`
+- optional: `HF_MODEL` default is `Qwen/Qwen2.5-14B-Instruct`
 - `X_BOT_USERNAME`
 - `X_BEARER_TOKEN`
 - `X_API_KEY`
@@ -158,8 +158,8 @@ Suggested settings:
 Useful environment variables:
 
 - `BSC_RPC_URL`
-- `OPENAI_API_KEY`
-- optional: `OPENAI_MODEL`
+- `HF_API_KEY`
+- optional: `HF_MODEL`
 
 ## Repo Map
 

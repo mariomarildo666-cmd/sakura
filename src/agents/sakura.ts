@@ -18,7 +18,7 @@ type SakuraResult = {
   };
   reasons: string[];
   cautions: string[];
-  engine: "heuristic" | "openai";
+  engine: "heuristic" | "huggingface";
   model: string | null;
 };
 
@@ -40,22 +40,22 @@ export async function analyzeWithSakura(rawInput: string) {
   ]);
 
   const heuristic = analyzeHeuristically(lookup, chart.candles);
-  const openAiResult = await analyzeWithOpenAI(lookup, chart.candles, heuristic);
+  const huggingFaceResult = await analyzeWithHuggingFace(lookup, chart.candles, heuristic);
 
-  return openAiResult || heuristic;
+  return huggingFaceResult || heuristic;
 }
 
-async function analyzeWithOpenAI(
+async function analyzeWithHuggingFace(
   lookup: Awaited<ReturnType<typeof lookupCa>>,
   candles: Array<{ open: number; high: number; low: number; close: number; volume?: number }>,
   heuristic: SakuraResult,
 ) {
-  const apiKey = process.env.OPENAI_API_KEY?.trim();
+  const apiKey = process.env.HF_API_KEY?.trim() || process.env.HUGGINGFACE_API_KEY?.trim() || process.env.HF_TOKEN?.trim();
   if (!apiKey) {
     return null;
   }
 
-  const model = process.env.OPENAI_MODEL?.trim() || "gpt-5.4-mini";
+  const model = process.env.HF_MODEL?.trim() || "Qwen/Qwen2.5-14B-Instruct";
   const candleSummary = summarizeCandles(candles);
   const payload = {
     model,
@@ -121,13 +121,13 @@ async function analyzeWithOpenAI(
         ),
       },
     ],
-    response_format: {
-      type: "json_object",
-    },
+    response_format: { type: "json_object" },
+    max_tokens: 350,
+    temperature: 0.9,
   };
 
   try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await fetch("https://router.huggingface.co/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -165,7 +165,7 @@ async function analyzeWithOpenAI(
       reasons: parsed.reasons,
       cautions: parsed.cautions,
       confidence: parsed.confidence,
-      engine: "openai" as const,
+      engine: "huggingface" as const,
       model,
     };
   } catch {
