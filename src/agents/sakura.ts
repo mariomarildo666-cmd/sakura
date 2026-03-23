@@ -70,7 +70,8 @@ async function analyzeWithHuggingFace(
           "Do not talk about liquidity unless it is absolutely necessary.",
           "A little playful absurdity is good, but do not invent facts.",
           "Return a raw JSON object only. No markdown. No code fences.",
-          'Use this exact shape: {"verdict":"bullish|bearish","summary":"string","reasons":["..."],"cautions":["..."],"confidence":0.0}',
+          'Use this exact shape: {"verdict":"bullish","summary":"string","reasons":["..."],"cautions":["..."],"confidence":0.0}',
+          'The verdict field must be exactly one literal value: either "bullish" or "bearish". Never output placeholders like "bullish|bearish".',
           "Keep summary to one short paragraph.",
           "Reasons and cautions must each contain 2 to 4 concise strings.",
           "If the setup is unclear, lean bearish but sound like a shitcoin trader calling the vibe.",
@@ -156,7 +157,7 @@ async function analyzeWithHuggingFace(
       return null;
     }
 
-    const parsed = normalizeLlmResult(content);
+    const parsed = normalizeLlmResult(content, heuristic.verdict);
     if (!parsed) {
       console.error(`[sakura:hf] parse failed ${content}`);
       return null;
@@ -276,16 +277,16 @@ function analyzeHeuristically(
   };
 }
 
-function normalizeLlmResult(content: string) {
+function normalizeLlmResult(content: string, fallbackVerdict: SakuraVerdict) {
   try {
     const payload = JSON.parse(extractJsonObject(content)) as SakuraLlmPayload;
-    const verdict = payload.verdict === "bullish" ? "bullish" : payload.verdict === "bearish" ? "bearish" : null;
+    const verdict = payload.verdict === "bullish" ? "bullish" : payload.verdict === "bearish" ? "bearish" : fallbackVerdict;
     const summary = typeof payload.summary === "string" ? payload.summary.trim() : "";
     const reasons = sanitizeStringList(payload.reasons);
     const cautions = sanitizeStringList(payload.cautions);
     const confidence = clampConfidence(payload.confidence);
 
-    if (!verdict || !summary || reasons.length === 0 || cautions.length === 0) {
+    if (!summary || reasons.length === 0 || cautions.length === 0) {
       return null;
     }
 
