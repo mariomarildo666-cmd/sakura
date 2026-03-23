@@ -681,6 +681,17 @@ h1 {
   min-height: 118px;
 }
 
+.overview-row-top .stat {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+}
+
+.overview-row-top .stat .stat-value {
+  margin-top: 12px;
+}
+
 .overview-row-social {
   align-items: stretch;
 }
