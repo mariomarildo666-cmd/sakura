@@ -55,7 +55,7 @@ async function analyzeWithHuggingFace(
     return null;
   }
 
-  const model = process.env.HF_MODEL?.trim() || "Qwen/Qwen2.5-14B-Instruct";
+  const model = process.env.HF_MODEL?.trim() || "Qwen/Qwen2.5-7B-Instruct-1M";
   const candleSummary = summarizeCandles(candles);
   const payload = {
     model,
