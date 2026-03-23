@@ -152,11 +152,13 @@ async function analyzeWithHuggingFace(
 
     const content = json.choices?.[0]?.message?.content?.trim();
     if (!content) {
+      console.error("[sakura:hf] empty content", JSON.stringify(json));
       return null;
     }
 
     const parsed = normalizeLlmResult(content);
     if (!parsed) {
+      console.error(`[sakura:hf] parse failed ${content}`);
       return null;
     }
 
