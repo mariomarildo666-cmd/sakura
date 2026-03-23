@@ -133,7 +133,10 @@ body::after {
   box-shadow: 0 12px 24px rgba(176, 146, 102, 0.12);
 }
 
-.rail-link {
+.side-rail .rail-link,
+.side-rail .rail-link:visited,
+.side-rail .rail-link:hover,
+.side-rail .rail-link:focus-visible {
   text-decoration: none;
   font-weight: 800;
   letter-spacing: 0.04em;
