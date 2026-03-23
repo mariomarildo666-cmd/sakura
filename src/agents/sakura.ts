@@ -55,7 +55,7 @@ async function analyzeWithHuggingFace(
     return null;
   }
 
-  const model = process.env.HF_MODEL?.trim() || "Qwen/Qwen2.5-7B-Instruct-1M";
+  const model = process.env.HF_MODEL?.trim() || "meta-llama/Llama-3.1-8B-Instruct:cerebras";
   const candleSummary = summarizeCandles(candles);
   const payload = {
     model,

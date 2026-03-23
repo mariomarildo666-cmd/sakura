@@ -78,7 +78,7 @@ Fill `.env` with what you need:
 - `PRIVATE_KEY`
 - `BSC_RPC_URL`
 - `HF_API_KEY`
-- optional: `HF_MODEL` default is `Qwen/Qwen2.5-7B-Instruct-1M`
+- optional: `HF_MODEL` default is `meta-llama/Llama-3.1-8B-Instruct:cerebras`
 - `X_BOT_USERNAME`
 - `X_BEARER_TOKEN`
 - `X_API_KEY`
