@@ -42,7 +42,11 @@ export async function analyzeWithSakura(rawInput: string) {
   const heuristic = analyzeHeuristically(lookup, chart.candles);
   const huggingFaceResult = await analyzeWithHuggingFace(lookup, chart.candles, heuristic);
 
-  return huggingFaceResult || heuristic;
+  if (!huggingFaceResult) {
+    throw new Error("Sakura AI is unavailable right now.");
+  }
+
+  return huggingFaceResult;
 }
 
 async function analyzeWithHuggingFace(
