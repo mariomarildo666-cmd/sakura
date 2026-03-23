@@ -31,7 +31,7 @@ type SakuraLlmPayload = {
 };
 
 const SAKURA_PERSONA =
-  "Sakura is a cute anime guardian who stays beside the trader and watches for danger first.";
+  "Sakura is a cute anime shitcoin trader who reads trend, meme energy, and name vibe before anything else.";
 
 export async function analyzeWithSakura(rawInput: string) {
   const [lookup, chart] = await Promise.all([
@@ -63,13 +63,17 @@ async function analyzeWithOpenAI(
       {
         role: "system",
         content: [
-          "You are Sakura, a cute anime market guardian who protects the trader from bad setups.",
+          "You are Sakura, a cute anime shitcoin trader with degen instincts.",
           "You analyze BSC meme coins and must stay grounded in the supplied data only.",
+          "Talk like a sharp meme trader, not like a risk committee.",
+          "Focus on trend, meme energy, ticker and name quality, social fuel, chart mood, and whether the coin feels easy to shill.",
+          "Do not talk about liquidity unless it is absolutely necessary.",
+          "A little playful absurdity is good, but do not invent facts.",
           "Return a raw JSON object only. No markdown. No code fences.",
           'Use this exact shape: {"verdict":"bullish|bearish","summary":"string","reasons":["..."],"cautions":["..."],"confidence":0.0}',
           "Keep summary to one short paragraph.",
           "Reasons and cautions must each contain 2 to 4 concise strings.",
-          "If the setup is unclear or fragile, lean bearish because Sakura protects first.",
+          "If the setup is unclear, lean bearish but sound like a shitcoin trader calling the vibe.",
         ].join(" "),
       },
       {
@@ -181,75 +185,70 @@ function analyzeHeuristically(
   const marketCap = Number(lookup.dexScreener?.marketCap || 0);
   const priceUsd = Number(lookup.dexScreener?.priceUsd || 0);
   const candleSummary = summarizeCandles(candles);
+  const vibe = scoreNameVibe(lookup.summary.name, lookup.summary.symbol, lookup.summary.description);
 
-  if (lookup.summary.liquidityAdded) {
+  if (vibe.score >= 2) {
     score += 2;
-    reasons.push("liquidity is live, so the market is already in trade mode");
-  } else {
-    score -= 3;
-    cautions.push("liquidity is not added yet, so this is still fragile");
+    reasons.push(vibe.reason || "name and ticker have decent meme memory");
+  } else if (vibe.score <= -1) {
+    score -= 1;
+    cautions.push(vibe.caution || "name and ticker feel hard to push on the timeline");
   }
 
-  if (liquidityUsd >= 15000) {
-    score += 2;
-    reasons.push("liquidity looks healthy enough for cleaner execution");
-  } else if (liquidityUsd > 0) {
-    score -= 1;
-    cautions.push("liquidity is thin, which makes volatility and slippage worse");
-  } else {
-    score -= 2;
-    cautions.push("liquidity is missing or not visible");
+  if (lookup.summary.aiCreator) {
+    score += 1;
+    reasons.push("AI angle still farms attention in this lane");
   }
 
   if (marketCap >= 50000) {
     score += 1;
-    reasons.push("market cap is starting to carry some weight");
+    reasons.push("market cap is big enough to feel like a real rotation candidate");
   } else if (marketCap > 0 && marketCap < 10000) {
     score -= 1;
-    cautions.push("market cap is still tiny, so it can move violently");
+    cautions.push("market cap is still micro enough to feel one wallet away from chaos");
   }
 
-  if (lookup.summary.website) {
+  if (lookup.summary.website && (lookup.summary.twitter || lookup.summary.telegram)) {
     score += 1;
-    reasons.push("project has at least one public link");
-  } else {
+    reasons.push("there is enough social surface to give the coin some timeline fuel");
+  } else if (!lookup.summary.website && !lookup.summary.twitter && !lookup.summary.telegram) {
     score -= 1;
-    cautions.push("there is no visible public website");
-  }
-
-  if (lookup.summary.twitter || lookup.summary.telegram) {
-    score += 1;
-    reasons.push("there is some social surface to monitor");
-  } else {
-    score -= 1;
-    cautions.push("social presence is weak right now");
+    cautions.push("the social shell is thin, so the narrative may die in the feed");
   }
 
   if (candleSummary.changePct >= 8) {
     score += 2;
-    reasons.push("short-term momentum is pushing up");
+    reasons.push("chart is printing enough green to wake up the trend chasers");
   } else if (candleSummary.changePct <= -8) {
     score -= 2;
-    cautions.push("short-term momentum is rolling over");
+    cautions.push("chart is bleeding and the vibe is starting to smell like exit liquidity");
   }
 
   if (candleSummary.greenRatio >= 0.58) {
     score += 1;
-    reasons.push("recent candle structure favors buyers");
+    reasons.push("recent candles still look like buyers are steering the meme");
   } else if (candleSummary.greenRatio <= 0.42) {
     score -= 1;
-    cautions.push("recent candle structure favors sellers");
+    cautions.push("recent candles look like sellers are farming the bounce");
   }
 
-  if (candleSummary.volatilityPct >= 35) {
-    cautions.push("volatility is elevated, so entries need discipline");
+  if (candleSummary.volatilityPct >= 35 && liquidityUsd > 0) {
+    cautions.push("the move is spicy enough to nuke late entries if the crowd apes too hard");
+  }
+
+  if (priceUsd > 0 && priceUsd < 0.00001) {
+    reasons.push("tiny unit bias can still bait the classic cheap-coin crowd");
+  }
+
+  if (!lookup.summary.liquidityAdded) {
+    cautions.push("the coin still feels pre-chaos rather than post-send");
   }
 
   const verdict: SakuraVerdict = score >= 2 ? "bullish" : "bearish";
   const summary =
     verdict === "bullish"
-      ? "Sakura says momentum is tradable, but only if you respect volatility and liquidity."
-      : "Sakura says protect the trader first. The setup is too weak or too unstable right now.";
+      ? "Sakura likes the trend and the meme packaging. This one has enough sauce to tempt the timeline."
+      : "Sakura is not buying the story yet. The chart or the branding still feels too awkward to shill with confidence.";
 
   return {
     tokenAddress: lookup.tokenAddress,
@@ -344,4 +343,47 @@ function summarizeCandles(candles: Array<{ open: number; high: number; low: numb
 
 function round(value: number) {
   return Math.round(value * 100) / 100;
+}
+
+function scoreNameVibe(name: string | null, symbol: string | null, description: string | null) {
+  const text = `${name || ""} ${symbol || ""} ${description || ""}`.toLowerCase();
+  let score = 0;
+  let reason: string | null = null;
+  let caution: string | null = null;
+
+  if (symbol && symbol.length >= 3 && symbol.length <= 6) {
+    score += 1;
+    reason = "ticker is short enough to be sticky in chat and on the timeline";
+  }
+
+  if (name && /ai|agent|cat|dog|pepe|sakura|moon|pump|meme|coin|inu/.test(name.toLowerCase())) {
+    score += 1;
+    reason = "name hits familiar meme keywords, so the narrative is easy to grasp";
+  }
+
+  if (description && description.length > 24) {
+    score += 1;
+  }
+
+  if (text.includes("fortune") || text.includes("oracle") || text.includes("agent")) {
+    score += 1;
+    reason = "theme has enough weird flavor to feel shillable";
+  }
+
+  if (name && name.length > 18) {
+    score -= 1;
+    caution = "name feels too long to spread cleanly";
+  }
+
+  if (symbol && symbol.length > 8) {
+    score -= 1;
+    caution = "ticker is too long and loses punch";
+  }
+
+  if (!/[a-z0-9]/i.test(text)) {
+    score -= 1;
+    caution = "branding is too abstract and hard to meme";
+  }
+
+  return { score, reason, caution };
 }
