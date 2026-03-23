@@ -94,7 +94,14 @@ body::after {
   width: 100%;
   max-width: 1400px;
   margin: 0 auto;
-  padding: 34px 22px;
+  min-height: 100vh;
+  padding: 28px 22px;
+}
+
+body:has(#result.hidden) .shell {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .landing-frame {
