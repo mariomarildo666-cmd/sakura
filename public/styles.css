@@ -136,16 +136,17 @@ body::after {
 .side-rail .rail-link,
 .side-rail .rail-link:visited,
 .side-rail .rail-link:hover,
-.side-rail .rail-link:focus-visible {
+.side-rail .rail-link:focus-visible,
+.side-rail .rail-link:active {
   text-decoration: none;
   font-weight: 800;
   letter-spacing: 0.04em;
-  background: #0f0f12;
-  color: #ffffff;
-  border-color: rgba(15, 15, 18, 0.72);
+  background: #0b0b10 !important;
+  color: #ffffff !important;
+  border-color: rgba(11, 11, 16, 0.92) !important;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.05),
-    0 12px 24px rgba(15, 15, 18, 0.22);
+    0 12px 24px rgba(15, 15, 18, 0.22) !important;
 }
 
 .rail-btn.is-active {
@@ -216,7 +217,7 @@ body::after {
   z-index: 1;
   display: grid;
   grid-template-columns: minmax(0, 1.05fr) minmax(340px, 0.95fr);
-  gap: 24px;
+  gap: 8px;
   align-items: center;
   min-height: 420px;
   padding: 24px 0 10px;
@@ -224,6 +225,7 @@ body::after {
 
 .hero-copy {
   max-width: 520px;
+  padding-right: 8px;
 }
 
 .hero-art {
