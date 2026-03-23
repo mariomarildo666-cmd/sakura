@@ -50,30 +50,45 @@
 
           <section class="hero">
             <div class="hero-copy">
-              <p class="eyebrow">Sakura Blossom Terminal</p>
-              <h1>Let Sakura Read Your Meme Coin</h1>
-              <p class="subtitle">
-                Drop a BSC contract address and let Sakura unfold the profile, chart, and launch
-                state inside one anime dashboard.
-              </p>
+              <div class="hero-copy-card">
+                <p class="eyebrow">Sakura Blossom Terminal</p>
+                <h1>Let Sakura Read Your Meme Coin</h1>
+                <p class="subtitle">
+                  Drop a BSC contract address and let Sakura break down the vibe, chart, socials,
+                  and launch state without the usual dead terminal feel.
+                </p>
+                <div class="hero-copy-meta">
+                  <span class="hero-meta-chip">BSC meme reads</span>
+                  <span class="hero-meta-chip">Live token lookup</span>
+                  <span class="hero-meta-chip">Sakura agent view</span>
+                </div>
+              </div>
               <p id="status" class="status" aria-live="polite"></p>
             </div>
 
-            <div class="hero-art">
-              <div class="hero-art-glow"></div>
-              <img src="/assets/sakura-neutral.png" alt="Sakura hero" class="hero-sakura" />
-              <form id="lookup-form" class="lookup-card hero-lookup">
-                <label class="sr-only" for="ca-input">Contract address</label>
-                <input
-                  id="ca-input"
-                  name="address"
-                  type="text"
-                  autocomplete="off"
-                  spellcheck="false"
-                  placeholder="Search CA..."
-                />
-                <button type="submit">Lookup</button>
-              </form>
+            <div class="hero-stage">
+              <div class="hero-stage-panel">
+                <div class="hero-stage-copy">
+                  <p class="hero-stage-label">Instant CA Check</p>
+                  <p class="hero-stage-text">Paste a contract and let Sakura decide if this thing has actual send potential or just BSC larp energy.</p>
+                </div>
+                <form id="lookup-form" class="lookup-card hero-lookup">
+                  <label class="sr-only" for="ca-input">Contract address</label>
+                  <input
+                    id="ca-input"
+                    name="address"
+                    type="text"
+                    autocomplete="off"
+                    spellcheck="false"
+                    placeholder="Search CA..."
+                  />
+                  <button type="submit">Lookup</button>
+                </form>
+                <div class="hero-stage-art">
+                  <div class="hero-art-glow"></div>
+                  <img src="/assets/sakura-neutral.png" alt="Sakura hero" class="hero-sakura" />
+                </div>
+              </div>
             </div>
           </section>
 

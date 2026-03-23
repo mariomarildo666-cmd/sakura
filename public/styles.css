@@ -258,49 +258,141 @@ body::after {
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: minmax(0, 1.12fr) minmax(360px, 0.88fr);
-  gap: 28px;
-  align-items: center;
-  min-height: 440px;
-  padding: 28px 0 10px;
+  grid-template-columns: minmax(0, 0.92fr) minmax(420px, 1.08fr);
+  gap: 26px;
+  align-items: stretch;
+  min-height: 470px;
+  padding: 30px 0 8px;
 }
 
 .hero-copy {
-  max-width: 580px;
-  padding-right: 10px;
+  max-width: none;
+  padding-right: 0;
+  display: grid;
+  align-content: start;
 }
 
-.hero-art {
+.hero-copy-card {
   position: relative;
-  min-height: 360px;
+  min-height: 100%;
+  padding: 30px 30px 28px;
+  border-radius: 34px;
+  border: 1px solid rgba(157, 107, 134, 0.16);
+  background:
+    radial-gradient(circle at top left, rgba(255, 233, 242, 0.58), transparent 28%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.56), rgba(255, 249, 246, 0.66)),
+    rgba(255, 250, 248, 0.6);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 24px 44px rgba(84, 52, 70, 0.08);
+}
+
+.hero-copy-card::after {
+  content: "";
+  position: absolute;
+  inset: 12px;
+  border-radius: 26px;
+  border: 1px solid rgba(157, 107, 134, 0.07);
+  pointer-events: none;
+}
+
+.hero-stage {
+  display: grid;
+  align-content: stretch;
+}
+
+.hero-stage-panel {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  min-height: 100%;
+  padding: 22px 22px 0;
+  border-radius: 34px;
+  border: 1px solid rgba(157, 107, 134, 0.16);
+  background:
+    radial-gradient(circle at top right, rgba(255, 219, 231, 0.54), transparent 24%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.56), rgba(255, 248, 245, 0.7)),
+    rgba(255, 249, 246, 0.62);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 24px 44px rgba(84, 52, 70, 0.08);
+}
+
+.hero-stage-copy {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.hero-stage-label {
+  margin: 0;
+  color: #b17f42;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.hero-stage-text {
+  margin: 0;
+  max-width: 460px;
+  color: #876777;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.hero-stage-art {
+  position: relative;
+  min-height: 300px;
   display: flex;
-  flex-direction: column;
+  align-items: end;
+  justify-content: center;
+  padding-top: 14px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.hero-copy-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.hero-meta-chip {
+  display: inline-flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 14px;
-  padding: 18px 18px 8px;
-  border-left: 1px solid rgba(157, 107, 134, 0.12);
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(157, 107, 134, 0.14);
+  background: rgba(255, 252, 253, 0.72);
+  color: #8a6478;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .hero-art-glow {
   position: absolute;
-  inset: 24px 8% 14px;
+  inset: 8px 10% -10px;
   border-radius: 42px;
   background:
     radial-gradient(circle at center, rgba(255, 245, 233, 0.96), rgba(255, 236, 223, 0.2) 58%, transparent 74%);
-  filter: blur(8px);
+  filter: blur(14px);
 }
 
 .hero-sakura {
   position: relative;
-  width: min(100%, 430px);
+  width: min(100%, 470px);
   height: auto;
   object-fit: contain;
-  filter: drop-shadow(0 26px 42px rgba(126, 104, 68, 0.16));
+  filter: drop-shadow(0 28px 46px rgba(126, 104, 68, 0.18));
 }
 
 .hero-lookup {
-  width: min(100%, 430px);
+  width: 100%;
   margin-top: 0;
 }
 
@@ -325,7 +417,7 @@ h1 {
 
 .subtitle {
   margin: 22px 0 0;
-  max-width: 520px;
+  max-width: 500px;
   color: #816574;
   font-size: clamp(16px, 2.3vw, 19px);
   line-height: 1.78;
@@ -495,7 +587,7 @@ h1 {
 
 .status {
   min-height: 24px;
-  margin: 22px 0 0;
+  margin: 14px 2px 0;
   color: #8d6e7f;
   font-size: 14px;
 }
@@ -1436,14 +1528,17 @@ h1 {
     max-width: none;
   }
 
-  .hero-art {
-    min-height: 280px;
-    place-items: center;
-  }
-
   .hero-lookup {
     width: min(100%, 520px);
     margin-top: 0;
+  }
+
+  .hero-stage-panel {
+    min-height: 0;
+  }
+
+  .hero-stage-art {
+    min-height: 260px;
   }
 
   #overview-grid {
