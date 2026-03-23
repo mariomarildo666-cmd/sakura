@@ -139,6 +139,17 @@ body::after {
   display: block;
 }
 
+.rail-home,
+.rail-github,
+.rail-home:visited,
+.rail-github:visited,
+.rail-home:hover,
+.rail-github:hover,
+.rail-home:focus-visible,
+.rail-github:focus-visible {
+  text-decoration: none;
+}
+
 .side-rail .rail-link,
 .side-rail .rail-link:visited,
 .side-rail .rail-link:hover,
@@ -153,6 +164,19 @@ body::after {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.05),
     0 12px 24px rgba(15, 15, 18, 0.22) !important;
+}
+
+.side-rail .rail-github,
+.side-rail .rail-github:visited,
+.side-rail .rail-github:hover,
+.side-rail .rail-github:focus-visible,
+.side-rail .rail-github:active {
+  background: rgba(232, 232, 236, 0.92) !important;
+  color: #383846 !important;
+  border-color: rgba(214, 214, 222, 0.96) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.78),
+    0 12px 24px rgba(130, 130, 146, 0.14) !important;
 }
 
 .rail-btn.is-active {
