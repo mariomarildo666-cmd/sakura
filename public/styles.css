@@ -959,6 +959,37 @@ h1 {
   gap: 16px;
 }
 
+.sakura-modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.sakura-mode-btn {
+  border: 1px solid rgba(202, 136, 174, 0.18);
+  border-radius: 999px;
+  min-height: 34px;
+  padding: 0 14px;
+  font: inherit;
+  font-weight: 700;
+  color: #9b6c86;
+  background: rgba(255, 255, 255, 0.72);
+  cursor: pointer;
+  transition: transform 160ms ease, background 160ms ease, border-color 160ms ease;
+}
+
+.sakura-mode-btn:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.sakura-mode-btn.is-active {
+  color: #7c4464;
+  border-color: rgba(221, 146, 189, 0.34);
+  background: linear-gradient(135deg, #ffe6f1, #ffd5e8 58%, #ffe9ba);
+}
+
 .sakura-figure-shell {
   flex: 1 1 auto;
   display: grid;

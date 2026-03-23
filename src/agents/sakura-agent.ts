@@ -85,34 +85,35 @@ function buildAgentAnswer(
   const ticker = lookup.summary.symbol ? `$${lookup.summary.symbol}` : "no ticker";
   const primaryReason = analysis.reasons[0] || "no clean reason";
   const primaryCaution = analysis.cautions[0] || "no strong warning";
+  const nameLine = `${name} / ${ticker}`;
 
   switch (mode) {
     case "warn":
-      return `Sakura warning mode: ${name} / ${ticker}. Main danger signal: ${primaryCaution}. Current verdict is ${analysis.verdict}.`;
+      return `Sakura warning pass on ${nameLine}: this one smells shaky. Biggest red flag is ${primaryCaution}. If you ape here, don't act surprised when the chart turns into chop.`;
     case "tweet":
       return tweetDraft
-        ? `Tweet draft ready for ${name}. Sakura wants to post a ${analysis.verdict} read built around: ${primaryReason}.`
+        ? `Tweet mode is live for ${nameLine}. Sakura cooked a ${analysis.verdict} post around ${primaryReason}.`
         : `Tweet draft unavailable for ${name}.`;
     case "reply":
       return tweetDraft
-        ? `Reply mode ready for ${name}. Sakura prepared a response using the ${analysis.verdict} read and the strongest angle: ${primaryReason}.`
+        ? `Reply mode ready for ${nameLine}. Sakura built a ${analysis.verdict} clapback around ${primaryReason}.`
         : `Reply mode unavailable for ${name}.`;
     case "read":
     default:
       return question
-        ? `Sakura read for "${question}": ${analysis.summary} Main push point: ${primaryReason}. Main caution: ${primaryCaution}.`
-        : `${analysis.summary} Main push point: ${primaryReason}. Main caution: ${primaryCaution}.`;
+        ? `Sakura read for "${question}": ${analysis.summary} Cleanest angle is ${primaryReason}. Main risk is ${primaryCaution}.`
+        : `${analysis.summary} Cleanest angle is ${primaryReason}. Main risk is ${primaryCaution}.`;
   }
 }
 
 function buildNextActions(mode: SakuraAgentMode, verdict: "bullish" | "bearish") {
   const base =
     verdict === "bullish"
-      ? ["Generate a tweet draft", "Open market page", "Ask Sakura for a warning pass"]
-      : ["Ask Sakura for a warning pass", "Open market page", "Generate a cautious tweet draft"];
+      ? ["Switch to tweet mode", "Open market page", "Run warning mode"]
+      : ["Run warning mode", "Open market page", "Switch to tweet mode"];
 
   if (mode === "tweet" || mode === "reply") {
-    return ["Post the draft on X", "Ask Sakura for a stricter warning read", "Open market page"];
+    return ["Post the draft on X", "Run warning mode", "Open market page"];
   }
 
   return base;

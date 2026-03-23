@@ -23,6 +23,7 @@ const sakuraSummary = document.querySelector("#sakura-summary");
 const sakuraScorecard = document.querySelector("#sakura-scorecard");
 const sakuraReasons = document.querySelector("#sakura-reasons");
 const sakuraCautions = document.querySelector("#sakura-cautions");
+const sakuraModeButtons = Array.from(document.querySelectorAll(".sakura-mode-btn"));
 const chartShell = document.querySelector("#chart-shell");
 const chartFrame = document.querySelector("#chart-frame");
 const chartLink = document.querySelector("#chart-link");
@@ -74,6 +75,7 @@ const marketFields = [
 let lastResult = null;
 let currentTimeframe = "15m";
 let chartLoading = false;
+let currentSakuraMode = "read";
 
 renderSkeleton();
 updateTimeframeButtons();
@@ -134,6 +136,17 @@ homeRail.addEventListener("click", (event) => {
   resetHomeView();
 });
 
+sakuraModeButtons.forEach((button) => {
+  button.addEventListener("click", async () => {
+    const mode = button.dataset.mode || "read";
+    currentSakuraMode = mode;
+    setActiveSakuraMode(mode);
+    if (lastResult?.tokenAddress) {
+      await renderSakura(lastResult.tokenAddress);
+    }
+  });
+});
+
 async function renderResult(data) {
   lastResult = data;
   skeletonGrid.classList.add("hidden");
@@ -175,6 +188,7 @@ async function renderSakura(address) {
   sakuraVerdict.className = "sakura-verdict";
   sakuraVerdict.textContent = "Reading";
   sakuraShell.classList.remove("is-bullish", "is-bearish");
+  setActiveSakuraMode(currentSakuraMode);
   setSakuraFigure("neutral");
   sakuraSummary.textContent =
     "Sakura is staring at the candles and deciding whether this thing belongs on the timeline or in the mute list.";
@@ -183,7 +197,7 @@ async function renderSakura(address) {
   sakuraCautions.innerHTML = "";
 
   try {
-    const response = await fetch(`/api/sakura-agent?address=${encodeURIComponent(address)}&mode=read`);
+    const response = await fetch(`/api/sakura-agent?address=${encodeURIComponent(address)}&mode=${encodeURIComponent(currentSakuraMode)}`);
     const agent = await response.json();
 
     if (!response.ok) {
@@ -212,6 +226,12 @@ async function renderSakura(address) {
     fillSakuraList(sakuraReasons, [], "No analysis points available.");
     fillSakuraList(sakuraCautions, [], "No caution points available.");
   }
+}
+
+function setActiveSakuraMode(mode) {
+  sakuraModeButtons.forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.mode === mode);
+  });
 }
 
 function renderSakuraScorecard(scorecard) {
@@ -629,6 +649,8 @@ function resetHomeView() {
   input.value = "";
   status.textContent = "";
   lastResult = null;
+  currentSakuraMode = "read";
+  setActiveSakuraMode("read");
   result.classList.add("hidden");
   heroResult.classList.add("hidden");
   logoShell.classList.add("hidden");
