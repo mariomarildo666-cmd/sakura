@@ -140,7 +140,6 @@ body::after {
 
 .hero-topbar,
 .hero-shell,
-.hero-cards,
 .hero-history,
 .status,
 #result {
@@ -372,97 +371,6 @@ body::after {
   filter: drop-shadow(0 18px 30px rgba(175, 136, 156, 0.24));
 }
 
-.hero-cards {
-  display: grid;
-  grid-template-columns: 1.15fr 0.62fr 0.62fr 0.9fr;
-  gap: 16px;
-  align-items: end;
-  padding: 0 0 0 54px;
-  margin-top: -24px;
-}
-
-.hero-card {
-  min-height: 170px;
-  padding: 20px 22px;
-  border: 1px solid rgba(255, 255, 255, 0.72);
-  border-radius: 32px;
-  background: rgba(255, 255, 255, 0.54);
-  backdrop-filter: blur(12px);
-  box-shadow: 0 18px 34px rgba(193, 172, 181, 0.16);
-}
-
-.hero-card-kicker {
-  margin: 0;
-  color: var(--text);
-  font-size: 15px;
-  line-height: 1.35;
-}
-
-.hero-card-title {
-  margin: 6px 0 0;
-  font-family: var(--display);
-  font-size: 52px;
-  line-height: 0.92;
-  color: #2e1f26;
-}
-
-.hero-card-cta {
-  width: 100%;
-  min-height: 64px;
-  margin-top: 24px;
-  padding: 0 18px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border: 0;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.88);
-  color: var(--text);
-  text-decoration: none;
-  font: inherit;
-  font-size: 18px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.hero-card-arrow {
-  width: 34px;
-  height: 34px;
-  display: grid;
-  place-items: center;
-  border-radius: 999px;
-  background: linear-gradient(180deg, #ffd98d, #f2c45d);
-  color: #634a0a;
-  font-size: 18px;
-}
-
-.hero-card-stat {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin-top: 18px;
-}
-
-.hero-card-stat strong {
-  font-size: 54px;
-  line-height: 0.92;
-  color: var(--text);
-}
-
-.hero-card-stat span {
-  color: var(--muted);
-  font-size: 18px;
-}
-
-.hero-card-complete,
-.hero-card-market {
-  min-height: 132px;
-}
-
-.hero-card-watch .hero-card-cta {
-  margin-top: 18px;
-}
-
 .hero-history {
   margin: 18px 0 0 54px;
   max-width: 420px;
@@ -471,6 +379,12 @@ body::after {
   border-radius: 24px;
   background: rgba(255, 255, 255, 0.5);
   backdrop-filter: blur(12px);
+}
+
+.hero-history-band {
+  max-width: none;
+  margin-top: -8px;
+  min-height: 172px;
 }
 
 .hero-history-head {
@@ -489,6 +403,10 @@ body::after {
 .hero-history-list {
   display: grid;
   gap: 10px;
+}
+
+.hero-history-band .hero-history-list {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .history-chip {
@@ -1090,13 +1008,16 @@ body::after {
   }
 
   .hero-cards {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
     padding-left: 0;
   }
 
   .hero-history,
   .status {
     margin-left: 0;
+  }
+
+  .hero-history-band .hero-history-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   #overview-grid {
@@ -1116,7 +1037,6 @@ body::after {
 
   .hero-topbar-right,
   .hero-search,
-  .hero-cards,
   .overview-row-top,
   .overview-row-social,
   .sakura-grid,
@@ -1142,8 +1062,8 @@ body::after {
     font-size: 42px;
   }
 
-  .hero-card-stat strong {
-    font-size: 40px;
+  .hero-history-band .hero-history-list {
+    grid-template-columns: 1fr;
   }
 
   #market-grid {
