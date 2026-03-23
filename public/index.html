@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=M+PLUS+Rounded+1c:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=M+PLUS+Rounded+1c:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700&family=UnifrakturCook:wght@700&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/styles.css" />
@@ -20,9 +20,7 @@
       <section class="dashboard">
         <aside class="side-rail" aria-label="Quick links">
           <a class="rail-btn rail-home is-active" href="/" aria-label="Home">✿</a>
-          <a class="rail-btn rail-link" href="https://x.com/" target="_blank" rel="noreferrer" aria-label="Open X">
-            X
-          </a>
+          <a class="rail-btn rail-link" href="https://x.com/" target="_blank" rel="noreferrer" aria-label="Open X">X</a>
           <a class="rail-btn rail-github" href="https://github.com/mariomarildo666-cmd/sakura" target="_blank" rel="noreferrer" aria-label="Open GitHub">
             <svg class="rail-icon" viewBox="0 0 24 24" aria-hidden="true">
               <path
@@ -37,14 +35,22 @@
         <div class="dashboard-panel">
           <header class="topbar">
             <div class="brand-block">
-              <p class="brand-kana">サクラターミナル</p>
+              <p class="brand-kana">アニマンガヘブン</p>
               <p class="brand-sub">Four.meme CA Intelligence</p>
-              <section id="history-shell" class="history-shell hidden">
-              <div class="history-head">
-                <p class="history-title">Recent Searches</p>
-              </div>
-              <div id="history-list" class="history-list"></div>
-              </section>
+            </div>
+            <div class="topbar-actions">
+              <form id="lookup-form" class="lookup-card topbar-lookup">
+                <label class="sr-only" for="ca-input">Contract address</label>
+                <input
+                  id="ca-input"
+                  name="address"
+                  type="text"
+                  autocomplete="off"
+                  spellcheck="false"
+                  placeholder="Search CA..."
+                />
+                <button type="submit">Lookup</button>
+              </form>
             </div>
           </header>
 
@@ -52,52 +58,54 @@
             <div class="hero-copy">
               <div class="hero-copy-card">
                 <p class="eyebrow">Sakura Blossom Terminal</p>
-                <h1>Let Sakura Read Your Meme Coin</h1>
+                <h1 class="hero-display">IMMERSE IN<br />MEME COIN<br />READING</h1>
                 <p class="subtitle">
                   Drop a BSC contract address and let Sakura break down the vibe, chart, socials,
-                  and launch state without the usual dead terminal feel.
+                  and launch state in one cute but sharp anime terminal.
                 </p>
-                <div class="hero-copy-meta">
-                  <span class="hero-meta-chip">BSC meme reads</span>
-                  <span class="hero-meta-chip">Live token lookup</span>
-                  <span class="hero-meta-chip">Sakura agent view</span>
-                </div>
+                <section id="history-shell" class="history-shell hidden">
+                  <div class="history-head">
+                    <p class="history-title">Recent Searches</p>
+                  </div>
+                  <div id="history-list" class="history-list"></div>
+                </section>
               </div>
               <p id="status" class="status" aria-live="polite"></p>
             </div>
 
             <div class="hero-stage">
               <div class="hero-stage-panel">
-                <div class="hero-stage-copy">
-                  <p class="hero-stage-label">Instant CA Check</p>
-                  <p class="hero-stage-text">Paste a contract and let Sakura decide if this thing has actual send potential or just BSC larp energy.</p>
-                </div>
-                <div class="lookup-shell">
-                  <div class="lookup-shell-head">
-                    <span class="lookup-shell-label">Contract Terminal</span>
-                    <span class="lookup-shell-pill">BSC / CA</span>
-                  </div>
-                  <form id="lookup-form" class="lookup-card hero-lookup">
-                    <label class="sr-only" for="ca-input">Contract address</label>
-                    <input
-                      id="ca-input"
-                      name="address"
-                      type="text"
-                      autocomplete="off"
-                      spellcheck="false"
-                      placeholder="Search CA..."
-                    />
-                    <button type="submit">Lookup</button>
-                  </form>
-                  <div class="lookup-shell-foot">
-                    <span class="lookup-foot-note">Paste any Four.meme token CA</span>
-                    <span class="lookup-foot-dot"></span>
-                    <span class="lookup-foot-note">Fast Sakura read</span>
-                  </div>
-                </div>
                 <div class="hero-stage-art">
                   <div class="hero-art-glow"></div>
                   <img src="/assets/sakura-neutral.png" alt="Sakura hero" class="hero-sakura" />
+                </div>
+
+                <div class="hero-bottom hero-bottom-left">
+                  <p class="hero-bottom-copy">Explore, Read, and</p>
+                  <p class="hero-bottom-title">ENJOY</p>
+                  <div class="hero-pill">Let’s Explore <span>↗</span></div>
+                </div>
+
+                <div class="hero-floating-card hero-floating-center">
+                  <p class="hero-floating-label">Complete</p>
+                  <div class="hero-floating-metric">
+                    <strong>120</strong>
+                    <span>Reads</span>
+                  </div>
+                </div>
+
+                <div class="hero-floating-card hero-floating-right">
+                  <p class="hero-floating-label">Signal</p>
+                  <div class="hero-floating-metric">
+                    <strong>24/7</strong>
+                    <span>Tracking</span>
+                  </div>
+                </div>
+
+                <div class="hero-bottom hero-bottom-right">
+                  <p class="hero-bottom-copy">Scan, Judge and</p>
+                  <p class="hero-bottom-title">ENJOY</p>
+                  <div class="hero-pill">Watch <span>↗</span></div>
                 </div>
               </div>
             </div>
