@@ -1069,6 +1069,45 @@ h1 {
   transform: rotate(45deg);
 }
 
+.sakura-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.sakura-card {
+  padding: 16px;
+  border-radius: 22px;
+  border: 1px solid rgba(202, 136, 174, 0.18);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.sakura-shell.is-bullish .sakura-card:first-child {
+  border-color: rgba(112, 212, 156, 0.28);
+  background: linear-gradient(180deg, rgba(242, 255, 246, 0.98), rgba(250, 255, 252, 0.92));
+}
+
+.sakura-shell.is-bearish .sakura-card:last-child {
+  border-color: rgba(226, 129, 170, 0.28);
+  background: linear-gradient(180deg, rgba(255, 243, 247, 0.98), rgba(255, 250, 252, 0.92));
+}
+
+.sakura-card-label {
+  margin: 0 0 10px;
+  color: #b07f98;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.sakura-list {
+  margin: 0;
+  padding-left: 18px;
+  color: #724b61;
+  line-height: 1.75;
+}
+
 .chart-shell {
   margin-top: 22px;
   padding: 20px;
@@ -1410,6 +1449,10 @@ h1 {
   }
 
   .sakura-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .sakura-grid {
     grid-template-columns: 1fr;
   }
 

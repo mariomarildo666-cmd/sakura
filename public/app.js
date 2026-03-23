@@ -20,6 +20,8 @@ const sakuraShell = document.querySelector("#sakura-shell");
 const sakuraFigure = document.querySelector("#sakura-figure");
 const sakuraVerdict = document.querySelector("#sakura-verdict");
 const sakuraSummary = document.querySelector("#sakura-summary");
+const sakuraReasons = document.querySelector("#sakura-reasons");
+const sakuraCautions = document.querySelector("#sakura-cautions");
 const chartShell = document.querySelector("#chart-shell");
 const chartFrame = document.querySelector("#chart-frame");
 const chartLink = document.querySelector("#chart-link");
@@ -175,6 +177,8 @@ async function renderSakura(address) {
   setSakuraFigure("neutral");
   sakuraSummary.textContent =
     "Sakura is glaring at the chart and deciding if this thing is a real send or just more BSC slop.";
+  sakuraReasons.innerHTML = "";
+  sakuraCautions.innerHTML = "";
 
   try {
     const response = await fetch(`/api/sakura-agent?address=${encodeURIComponent(address)}&mode=read`);
@@ -194,11 +198,15 @@ async function renderSakura(address) {
     sakuraShell.classList.add(analysis.verdict === "bullish" ? "is-bullish" : "is-bearish");
     setSakuraFigure(analysis.verdict === "bullish" ? "bullish" : "bearish");
     sakuraSummary.textContent = buildMergedSakuraComment(agent.answer || analysis.summary, analysis.reasons, analysis.cautions);
+    fillSakuraList(sakuraReasons, analysis.reasons, "Sakura still does not see a clean ape angle.");
+    fillSakuraList(sakuraCautions, analysis.cautions, "Sakura is not seeing a huge red flag yet.");
   } catch (error) {
     sakuraVerdict.textContent = "--";
     sakuraShell.classList.remove("is-bullish", "is-bearish");
     setSakuraFigure("neutral");
     sakuraSummary.textContent = error instanceof Error ? error.message : "Sakura analysis failed.";
+    fillSakuraList(sakuraReasons, [], "No ape angle available.");
+    fillSakuraList(sakuraCautions, [], "No fade angle available.");
   }
 }
 
@@ -438,6 +446,16 @@ function buildMergedSakuraComment(base, reasons, cautions) {
   const ape = Array.isArray(reasons) && reasons.length ? reasons.slice(0, 2).join(". ") : "I still do not see a clean ape angle";
   const fade = Array.isArray(cautions) && cautions.length ? cautions.slice(0, 2).join(". ") : "there is no giant red flag yet";
   return `${base} Ape angle: ${ape}. Fade angle: ${fade}.`;
+}
+
+function fillSakuraList(target, items, fallbackText) {
+  target.innerHTML = "";
+  const values = Array.isArray(items) && items.length ? items : [fallbackText];
+  for (const item of values) {
+    const li = document.createElement("li");
+    li.textContent = item;
+    target.appendChild(li);
+  }
 }
 
 function applyMetricTone(item, label) {
