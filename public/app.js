@@ -20,10 +20,6 @@ const sakuraShell = document.querySelector("#sakura-shell");
 const sakuraFigure = document.querySelector("#sakura-figure");
 const sakuraVerdict = document.querySelector("#sakura-verdict");
 const sakuraSummary = document.querySelector("#sakura-summary");
-const sakuraScorecard = document.querySelector("#sakura-scorecard");
-const sakuraReasons = document.querySelector("#sakura-reasons");
-const sakuraCautions = document.querySelector("#sakura-cautions");
-const sakuraModeButtons = Array.from(document.querySelectorAll(".sakura-mode-btn"));
 const chartShell = document.querySelector("#chart-shell");
 const chartFrame = document.querySelector("#chart-frame");
 const chartLink = document.querySelector("#chart-link");
@@ -75,7 +71,6 @@ const marketFields = [
 let lastResult = null;
 let currentTimeframe = "15m";
 let chartLoading = false;
-let currentSakuraMode = "read";
 
 renderSkeleton();
 updateTimeframeButtons();
@@ -136,17 +131,6 @@ homeRail.addEventListener("click", (event) => {
   resetHomeView();
 });
 
-sakuraModeButtons.forEach((button) => {
-  button.addEventListener("click", async () => {
-    const mode = button.dataset.mode || "read";
-    currentSakuraMode = mode;
-    setActiveSakuraMode(mode);
-    if (lastResult?.tokenAddress) {
-      await renderSakura(lastResult.tokenAddress);
-    }
-  });
-});
-
 async function renderResult(data) {
   lastResult = data;
   skeletonGrid.classList.add("hidden");
@@ -186,18 +170,14 @@ async function renderResult(data) {
 async function renderSakura(address) {
   sakuraShell.classList.remove("hidden");
   sakuraVerdict.className = "sakura-verdict";
-  sakuraVerdict.textContent = "Reading";
+  sakuraVerdict.textContent = "...";
   sakuraShell.classList.remove("is-bullish", "is-bearish");
-  setActiveSakuraMode(currentSakuraMode);
   setSakuraFigure("neutral");
   sakuraSummary.textContent =
-    "Sakura is staring at the candles and deciding whether this thing belongs on the timeline or in the mute list.";
-  sakuraScorecard.innerHTML = "";
-  sakuraReasons.innerHTML = "";
-  sakuraCautions.innerHTML = "";
+    "Sakura is glaring at the chart and deciding if this thing is a real send or just more BSC slop.";
 
   try {
-    const response = await fetch(`/api/sakura-agent?address=${encodeURIComponent(address)}&mode=${encodeURIComponent(currentSakuraMode)}`);
+    const response = await fetch(`/api/sakura-agent?address=${encodeURIComponent(address)}&mode=read`);
     const agent = await response.json();
 
     if (!response.ok) {
@@ -209,53 +189,16 @@ async function renderSakura(address) {
       throw new Error("Sakura agent returned no analysis.");
     }
 
-    sakuraVerdict.textContent = analysis.verdict;
+    sakuraVerdict.textContent = `${calculateTotalScore(analysis.scorecard)}/10`;
     sakuraVerdict.classList.add(analysis.verdict === "bullish" ? "is-bullish" : "is-bearish");
     sakuraShell.classList.add(analysis.verdict === "bullish" ? "is-bullish" : "is-bearish");
     setSakuraFigure(analysis.verdict === "bullish" ? "bullish" : "bearish");
-    sakuraSummary.textContent = agent.answer || analysis.summary;
-    renderSakuraScorecard(analysis.scorecard);
-    fillSakuraList(sakuraReasons, analysis.reasons, "Sakura does not see enough clean bullish signals yet.");
-    fillSakuraList(sakuraCautions, analysis.cautions, "No major danger signal is visible right now.");
+    sakuraSummary.textContent = buildMergedSakuraComment(agent.answer || analysis.summary, analysis.reasons, analysis.cautions);
   } catch (error) {
-    sakuraVerdict.textContent = "Offline";
+    sakuraVerdict.textContent = "--";
     sakuraShell.classList.remove("is-bullish", "is-bearish");
     setSakuraFigure("neutral");
     sakuraSummary.textContent = error instanceof Error ? error.message : "Sakura analysis failed.";
-    sakuraScorecard.innerHTML = "";
-    fillSakuraList(sakuraReasons, [], "No analysis points available.");
-    fillSakuraList(sakuraCautions, [], "No caution points available.");
-  }
-}
-
-function setActiveSakuraMode(mode) {
-  sakuraModeButtons.forEach((button) => {
-    button.classList.toggle("is-active", button.dataset.mode === mode);
-  });
-}
-
-function renderSakuraScorecard(scorecard) {
-  if (!sakuraScorecard) return;
-
-  const entries = [
-    ["Name Vibe", scorecard?.nameVibe ?? 0],
-    ["Social Heat", scorecard?.socialHeat ?? 0],
-    ["Chart Heat", scorecard?.chartHeat ?? 0],
-    ["Danger", scorecard?.danger ?? 0],
-  ];
-
-  sakuraScorecard.innerHTML = "";
-  for (const [label, value] of entries) {
-    const publicScore = toPublicScore(label, value);
-    const descriptor = describeScore(label, publicScore);
-    const chip = document.createElement("div");
-    chip.className = "sakura-score-chip";
-    chip.innerHTML = `
-      <span class="sakura-score-label">${escapeHtml(label)}</span>
-      <strong class="sakura-score-value">${publicScore}/10</strong>
-      <span class="sakura-score-note">${escapeHtml(descriptor)}</span>
-    `;
-    sakuraScorecard.appendChild(chip);
   }
 }
 
@@ -337,16 +280,6 @@ async function renderChart(data) {
 function destroyChart() {
   chartFrame.innerHTML = "";
   chartLoading = false;
-}
-
-function fillSakuraList(target, items, fallbackText) {
-  target.innerHTML = "";
-  const values = Array.isArray(items) && items.length ? items : [fallbackText];
-  for (const item of values) {
-    const li = document.createElement("li");
-    li.textContent = item;
-    target.appendChild(li);
-  }
 }
 
 function updateTimeframeButtons() {
@@ -487,54 +420,24 @@ function formatCompactMoney(value) {
   }).format(number);
 }
 
-function formatMiniScore(value) {
-  const number = Number(value);
-  if (!Number.isFinite(number)) return "0";
-  return number > 0 ? `+${number}` : String(number);
+function calculateTotalScore(scorecard) {
+  const name = mapMiniScoreToTen(scorecard?.nameVibe ?? 0);
+  const social = mapMiniScoreToTen(scorecard?.socialHeat ?? 0);
+  const chart = mapMiniScoreToTen(scorecard?.chartHeat ?? 0);
+  const danger = 10 - mapMiniScoreToTen(scorecard?.danger ?? 0);
+  return Math.max(0, Math.min(10, Math.round((name + social + chart + danger) / 4)));
 }
 
-function toPublicScore(label, value) {
+function mapMiniScoreToTen(value) {
   const number = Number(value);
   const clamped = Number.isFinite(number) ? Math.max(-2, Math.min(2, number)) : 0;
-  const mapped = Math.round(((clamped + 2) / 4) * 10);
-
-  if (label === "Danger") {
-    return mapped;
-  }
-
-  return mapped;
+  return Math.round(((clamped + 2) / 4) * 10);
 }
 
-function describeScore(label, score) {
-  if (label === "Name Vibe") {
-    if (score >= 8) return "easy shill";
-    if (score >= 6) return "pretty sticky";
-    if (score >= 4) return "mid vibe";
-    return "weak branding";
-  }
-
-  if (label === "Social Heat") {
-    if (score >= 8) return "feed is live";
-    if (score >= 6) return "some pulse";
-    if (score >= 4) return "still sleepy";
-    return "dead socials";
-  }
-
-  if (label === "Chart Heat") {
-    if (score >= 8) return "sending";
-    if (score >= 6) return "warming up";
-    if (score >= 4) return "still chop";
-    return "chart looks cooked";
-  }
-
-  if (label === "Danger") {
-    if (score >= 8) return "high risk";
-    if (score >= 6) return "spicy";
-    if (score >= 4) return "manageable";
-    return "low danger";
-  }
-
-  return "";
+function buildMergedSakuraComment(base, reasons, cautions) {
+  const ape = Array.isArray(reasons) && reasons.length ? reasons.slice(0, 2).join(". ") : "I still do not see a clean ape angle";
+  const fade = Array.isArray(cautions) && cautions.length ? cautions.slice(0, 2).join(". ") : "there is no giant red flag yet";
+  return `${base} Ape angle: ${ape}. Fade angle: ${fade}.`;
 }
 
 function applyMetricTone(item, label) {
@@ -696,8 +599,6 @@ function resetHomeView() {
   input.value = "";
   status.textContent = "";
   lastResult = null;
-  currentSakuraMode = "read";
-  setActiveSakuraMode("read");
   result.classList.add("hidden");
   heroResult.classList.add("hidden");
   logoShell.classList.add("hidden");

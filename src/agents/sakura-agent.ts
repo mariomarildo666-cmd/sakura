@@ -101,8 +101,8 @@ function buildAgentAnswer(
     case "read":
     default:
       return question
-        ? `Sakura read for "${question}": ${analysis.summary} Cleanest angle is ${primaryReason}. Main risk is ${primaryCaution}.`
-        : `${analysis.summary} Best part is ${primaryReason}. Main thing that still annoys me is ${primaryCaution}.`;
+        ? `Sakura read for "${question}": ${analysis.summary} The only part making me look twice is ${primaryReason}. The part making me roll my eyes is ${primaryCaution}.`
+        : `${analysis.summary} The only part making me look twice is ${primaryReason}. The part making me roll my eyes is ${primaryCaution}.`;
   }
 }
 

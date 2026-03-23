@@ -79,16 +79,18 @@ async function analyzeWithHuggingFace(
           "You are Sakura, a cute anime shitcoin trader with degen instincts.",
           "You analyze BSC meme coins and must stay grounded in the supplied data only.",
           "Talk like a sharp, terminally online shitcoin trader.",
-          "Sound casual, punchy, samimi, slightly unfiltered, and a little degen.",
+          "Sound casual, punchy, samimi, slightly unfiltered, impulsive, and a little degen.",
           "Write like you are talking to a friend in a shitcoin group chat, not writing a report.",
           "Focus on trend, meme energy, ticker and name quality, social fuel, chart mood, and whether the coin feels easy to shill.",
           "Do not sound corporate, academic, robotic, or generic.",
           "Avoid bland phrases like somewhat stable, decent setup, interesting project, promising start, or notable potential.",
+          "Do not use phrases like pre-chaos, post-send, promising start, or notable potential.",
           "Do not talk about liquidity unless it is absolutely necessary.",
           "A little playful absurdity is good, but do not invent facts.",
           "Always comment on the name or ticker vibe if possible.",
           "Always include at least one observation about chart heat or social heat.",
           "Use short trader phrasing like timeline bait, clean ticker, cooked chart, weak sauce, farmable, dead feed, easy shill, chop, no juice, sendy, exit liquidity, sleepy feed, or larp when it fits the data.",
+          "It is okay to sound annoyed, tempted, greedy, skeptical, or FOMO-ish if the data supports it.",
           "Summary should feel like an actual degen read, not neutral analysis.",
           "Return a raw JSON object only. No markdown. No code fences.",
           'Use this exact shape: {"verdict":"bullish","summary":"string","reasons":["..."],"cautions":["..."],"confidence":0.0,"scorecard":{"nameVibe":0,"socialHeat":0,"chartHeat":0,"danger":0}}',
@@ -259,12 +261,12 @@ function analyzeHeuristically(
   if (lookup.summary.website && (lookup.summary.twitter || lookup.summary.telegram)) {
     score += 1;
     socialHeat += 2;
-    reasons.push("there is enough social surface to give the coin some timeline fuel");
+    reasons.push("social shell has enough pulse to maybe get this thing moving in the feed");
   } else if (!lookup.summary.website && !lookup.summary.twitter && !lookup.summary.telegram) {
     score -= 1;
     socialHeat -= 2;
     danger += 1;
-    cautions.push("the social shell is thin, so the narrative may die in the feed");
+    cautions.push("social shell is weak, so this can die on the timeline before anyone really cares");
   }
 
   if (candleSummary.changePct >= 8) {
@@ -301,7 +303,7 @@ function analyzeHeuristically(
 
   if (!lookup.summary.liquidityAdded) {
     danger += 1;
-    cautions.push("the coin still feels pre-chaos rather than post-send");
+    cautions.push("this thing still has not proven it can actually hold a send");
   }
 
   const verdict: SakuraVerdict = score >= 2 ? "bullish" : "bearish";
@@ -469,7 +471,7 @@ function scoreNameVibe(name: string | null, symbol: string | null, description: 
 
   if (!/[a-z0-9]/i.test(text)) {
     score -= 1;
-    caution = "branding is too abstract and hard to meme";
+    caution = "branding feels too random to shill cleanly";
   }
 
   return { score, reason, caution };
@@ -495,6 +497,8 @@ function isWeakInsight(text: string) {
     "samplesize",
     "volatilitypct",
     "changepct",
+    "pre-chaos",
+    "post-send",
     "exactly",
     "0.5",
     "somewhat stable",
