@@ -1,6 +1,9 @@
 const form = document.querySelector("#lookup-form");
 const input = document.querySelector("#ca-input");
 const status = document.querySelector("#status");
+const historyShell = document.querySelector("#history-shell");
+const historyList = document.querySelector("#history-list");
+const clearHistoryButton = document.querySelector("#clear-history");
 const result = document.querySelector("#result");
 const overviewGrid = document.querySelector("#overview-grid");
 const marketGrid = document.querySelector("#market-grid");
@@ -67,12 +70,15 @@ const marketFields = [
   ["Trading Fee", "tradingFeeRate"],
 ];
 
+const HISTORY_KEY = "sakura_recent_reads_v1";
+
 let lastResult = null;
 let currentTimeframe = "15m";
 let chartLoading = false;
 
 renderSkeleton();
 updateTimeframeButtons();
+renderHistory();
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -112,6 +118,7 @@ form.addEventListener("submit", async (event) => {
 
     await renderResult(data);
     syncShareUrl(address);
+    saveHistoryEntry(data);
     status.textContent = "Lookup complete.";
   } catch (error) {
     status.textContent = error instanceof Error ? error.message : "Lookup failed.";
@@ -121,6 +128,11 @@ form.addEventListener("submit", async (event) => {
 
 timeframeButtons.forEach((button) => {
   button.addEventListener("click", () => {});
+});
+
+clearHistoryButton.addEventListener("click", () => {
+  localStorage.removeItem(HISTORY_KEY);
+  renderHistory();
 });
 
 async function renderResult(data) {
@@ -572,4 +584,74 @@ function syncShareUrl(address) {
   const url = new URL(window.location.href);
   url.searchParams.set("ca", address);
   window.history.replaceState({}, "", url);
+}
+
+function saveHistoryEntry(data) {
+  const tokenAddress = extractAddress(data?.tokenAddress || "");
+  if (!tokenAddress) return;
+
+  const nextEntry = {
+    tokenAddress,
+    name: formatValue(data.summary?.name),
+    symbol: formatValue(data.summary?.symbol),
+    timestamp: Date.now(),
+  };
+
+  const existing = readHistory().filter((entry) => entry.tokenAddress.toLowerCase() !== tokenAddress.toLowerCase());
+  const next = [nextEntry, ...existing].slice(0, 8);
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(next));
+  renderHistory();
+}
+
+function readHistory() {
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function renderHistory() {
+  const entries = readHistory();
+  historyList.innerHTML = "";
+
+  if (!entries.length) {
+    historyShell.classList.add("hidden");
+    return;
+  }
+
+  historyShell.classList.remove("hidden");
+
+  for (const entry of entries) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "history-chip";
+    button.innerHTML = `
+      <span class="history-chip-name">${escapeHtml(entry.name)}</span>
+      <span class="history-chip-symbol">${escapeHtml(entry.symbol)}</span>
+      <span class="history-chip-address">${shortenAddress(entry.tokenAddress)}</span>
+    `;
+    button.addEventListener("click", () => {
+      input.value = entry.tokenAddress;
+      form.requestSubmit();
+    });
+    historyList.appendChild(button);
+  }
+}
+
+function shortenAddress(address) {
+  if (typeof address !== "string" || address.length < 10) return address || "-";
+  return `${address.slice(0, 6)}...${address.slice(-4)}`;
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
