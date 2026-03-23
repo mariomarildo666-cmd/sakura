@@ -181,19 +181,28 @@ async function renderSakura(address) {
   sakuraCautions.innerHTML = "";
 
   try {
-    const response = await fetch(`/api/analyze?address=${encodeURIComponent(address)}`);
-    const analysis = await response.json();
+    const response = await fetch(`/api/sakura-agent?address=${encodeURIComponent(address)}&mode=read`);
+    const agent = await response.json();
 
     if (!response.ok) {
-      throw new Error(analysis.error || "Sakura analysis failed.");
+      throw new Error(agent.error || "Sakura agent failed.");
+    }
+
+    const analysis = agent.payload?.analysis || null;
+    if (!analysis) {
+      throw new Error("Sakura agent returned no analysis.");
     }
 
     sakuraVerdict.textContent = analysis.verdict;
     sakuraVerdict.classList.add(analysis.verdict === "bullish" ? "is-bullish" : "is-bearish");
     sakuraShell.classList.add(analysis.verdict === "bullish" ? "is-bullish" : "is-bearish");
     setSakuraFigure(analysis.verdict === "bullish" ? "bullish" : "bearish");
-    sakuraSummary.textContent = analysis.summary;
-    fillSakuraList(sakuraReasons, analysis.reasons, "Sakura does not see enough clean bullish signals yet.");
+    sakuraSummary.textContent = agent.answer || analysis.summary;
+    fillSakuraList(
+      sakuraReasons,
+      Array.isArray(agent.nextActions) && agent.nextActions.length ? agent.nextActions : analysis.reasons,
+      "Sakura does not see enough clean bullish signals yet.",
+    );
     fillSakuraList(sakuraCautions, analysis.cautions, "No major danger signal is visible right now.");
   } catch (error) {
     sakuraVerdict.textContent = "Offline";
