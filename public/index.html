@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Sakura CA Lookup</title>
+    <title>Sakura Terminal</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -13,193 +13,198 @@
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
-    <div class="bg-grid"></div>
-    <div class="bg-glow bg-glow-a"></div>
-    <div class="bg-glow bg-glow-b"></div>
+    <div class="backdrop backdrop-a"></div>
+    <div class="backdrop backdrop-b"></div>
+    <div class="backdrop-grid"></div>
 
     <main class="shell">
-      <a class="rail-home sr-only" href="/">Home</a>
+      <section class="landing-frame">
+        <header class="hero-topbar">
+          <nav class="hero-links hero-links-left" aria-label="Primary">
+            <a href="/" class="hero-link">About</a>
+            <a href="https://github.com/mariomarildo666-cmd/sakura" target="_blank" rel="noreferrer" class="hero-link">Marketplace</a>
+            <a href="https://x.com/" target="_blank" rel="noreferrer" class="hero-link">Staking</a>
+          </nav>
 
-      <section class="dashboard">
-        <div class="dashboard-panel">
-          <header class="topbar">
-            <nav class="topnav topnav-left" aria-label="Primary">
-              <a class="topnav-link" href="/">About</a>
-              <a class="topnav-link" href="https://github.com/mariomarildo666-cmd/sakura" target="_blank" rel="noreferrer">Marketplace</a>
-              <a class="topnav-link" href="https://x.com/" target="_blank" rel="noreferrer">Staking</a>
-            </nav>
+          <div class="hero-mark">
+            <p class="hero-mark-title">SAKURA TERMINAL</p>
+            <p class="hero-mark-sub">BSC MEME READ ENGINE</p>
+          </div>
 
-            <div class="brand-block">
-              <p class="brand-mark">SAKURA // BSC</p>
-              <p class="brand-sub">Meme Coin Reading Terminal</p>
-            </div>
+          <nav class="hero-links hero-links-right" aria-label="Secondary">
+            <a href="#result" class="hero-link">Play To Earn</a>
+            <a href="#panel-overview" class="hero-link">Guides</a>
+            <a href="https://github.com/mariomarildo666-cmd/sakura" target="_blank" rel="noreferrer" class="hero-link">FAQ</a>
+          </nav>
+        </header>
 
-            <nav class="topnav topnav-right" aria-label="Secondary">
-              <a class="topnav-link" href="#result">Play To Earn</a>
-              <a class="topnav-link" href="#panel-overview">Guides</a>
-              <a class="topnav-link" href="https://github.com/mariomarildo666-cmd/sakura" target="_blank" rel="noreferrer">FAQ</a>
-            </nav>
-          </header>
+        <div class="hero-shell">
+          <div class="hero-copy">
+            <p class="hero-index">01/06</p>
+            <h1 class="hero-title">PLAY TO READ<br />MEME COIN<br />SIGNALS</h1>
+            <p class="hero-subtitle">BSC contract reads. Sakura verdicts. Anime terminal energy.</p>
 
-          <section class="hero">
-            <div class="hero-copy">
-              <p class="hero-index">01/06</p>
-              <h1 class="hero-title">PLAY TO READ<br />MEME COIN<br />SIGNALS</h1>
-              <p class="hero-subtitle">BSC contract reads. Sakura verdicts. Anime terminal energy.</p>
-
-              <div class="hero-actions">
-                <form id="lookup-form" class="lookup-card">
-                  <label class="sr-only" for="ca-input">Contract address</label>
-                  <input
-                    id="ca-input"
-                    name="address"
-                    type="text"
-                    autocomplete="off"
-                    spellcheck="false"
-                    placeholder="Paste contract address..."
-                  />
-                  <button type="submit">START NOW</button>
-                </form>
-
-                <div class="hero-social-row">
-                  <a class="hero-social" href="https://x.com/" target="_blank" rel="noreferrer" aria-label="X">X</a>
-                  <a class="hero-social" href="https://github.com/mariomarildo666-cmd/sakura" target="_blank" rel="noreferrer" aria-label="GitHub">GH</a>
-                  <button class="hero-social" type="button" aria-label="Sakura">SA</button>
-                </div>
-              </div>
-
-              <section id="history-shell" class="hero-history hidden">
-                <div class="hero-history-head">
-                  <p class="history-title">Recent Searches</p>
-                </div>
-                <div id="history-list" class="history-list"></div>
-              </section>
-
-              <p id="status" class="status" aria-live="polite"></p>
-            </div>
-
-            <div class="hero-stage">
-              <div class="hero-stage-frame"></div>
-              <img src="/assets/sakura-neutral.png" alt="Sakura hero" class="hero-sakura" />
-            </div>
-          </section>
-
-          <section id="result" class="result hidden">
-            <div id="hero-result" class="hero-result hidden">
-              <div id="logo-shell" class="logo-shell hidden">
-                <div class="logo-ring"></div>
-                <img id="token-logo" class="token-logo hidden" alt="Token logo" />
-              </div>
-              <div class="hero-meta">
-                <p id="result-name" class="result-name"></p>
-                <div class="action-row">
-                  <button id="copy-ca" class="ghost-btn" type="button">Copy CA</button>
-                  <button id="copy-link" class="ghost-btn" type="button">Copy Link</button>
-                  <a id="open-fourmeme" class="ghost-btn link-btn hidden" target="_blank" rel="noreferrer">Open Four.meme</a>
-                </div>
+            <div class="hero-cta-row">
+              <button id="hero-start" class="hero-start-btn" type="button">START NOW</button>
+              <div class="hero-socials" aria-label="Social links">
+                <a href="https://x.com/" target="_blank" rel="noreferrer" class="hero-social">X</a>
+                <a href="https://github.com/mariomarildo666-cmd/sakura" target="_blank" rel="noreferrer" class="hero-social">GH</a>
+                <button class="hero-social" type="button" aria-label="Sakura">SA</button>
               </div>
             </div>
 
-            <div class="tabs" id="tabs">
-              <button class="tab-btn is-active" type="button" data-tab="overview">Overview</button>
-              <button class="tab-btn" type="button" data-tab="market">Market</button>
-              <button class="tab-btn" type="button" data-tab="raw">Raw</button>
+            <section id="history-shell" class="hero-history hidden">
+              <div class="hero-history-head">
+                <p class="hero-history-title">Recent Searches</p>
+              </div>
+              <div id="history-list" class="hero-history-list"></div>
+            </section>
+
+            <p id="status" class="status" aria-live="polite"></p>
+          </div>
+
+          <div class="hero-stage">
+            <form id="lookup-form" class="hero-search">
+              <label class="sr-only" for="ca-input">Contract address</label>
+              <input
+                id="ca-input"
+                name="address"
+                type="text"
+                autocomplete="off"
+                spellcheck="false"
+                placeholder="Search CA..."
+              />
+              <button type="submit">Lookup</button>
+            </form>
+
+            <div class="hero-character-wrap">
+              <div class="hero-character-glow"></div>
+              <div class="hero-character-panel"></div>
+              <img src="/assets/sakura-neutral.png" alt="Sakura hero" class="hero-character" />
             </div>
-
-            <div id="skeleton-grid" class="summary-grid hidden"></div>
-
-            <section class="tab-panel" id="panel-overview">
-              <div class="summary-grid" id="overview-grid"></div>
-
-              <section id="sakura-shell" class="sakura-shell hidden">
-                <div class="sakura-layout">
-                  <div class="sakura-visual">
-                    <div class="sakura-figure-shell">
-                      <img id="sakura-figure" class="sakura-figure" src="/assets/sakura-neutral.png" alt="Sakura" />
-                    </div>
-                  </div>
-                  <div class="sakura-content">
-                    <div class="sakura-head">
-                      <div>
-                        <p class="sakura-eyebrow">Sakura Agent</p>
-                        <h2 class="sakura-title">Trader Read</h2>
-                      </div>
-                      <div id="sakura-verdict" class="sakura-verdict">-</div>
-                    </div>
-                    <div class="sakura-bubble">
-                      <p id="sakura-summary" class="sakura-summary"></p>
-                    </div>
-                    <div class="sakura-grid">
-                      <article class="sakura-card">
-                        <p class="sakura-card-label">Why Sakura would ape</p>
-                        <ul id="sakura-reasons" class="sakura-list"></ul>
-                      </article>
-                      <article class="sakura-card">
-                        <p class="sakura-card-label">Why Sakura would fade</p>
-                        <ul id="sakura-cautions" class="sakura-list"></ul>
-                      </article>
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-              <section id="chart-shell" class="chart-shell hidden">
-                <div class="chart-head">
-                  <div class="chart-head-main">
-                    <p class="chart-title">Petal Chart</p>
-                    <div class="chart-ribbon">
-                      <span id="chart-trend-chip" class="chart-chip">Trend: -</span>
-                      <span id="chart-timeframe-chip" class="chart-chip">TF: 15m</span>
-                      <span id="chart-candle-chip" class="chart-chip">Candles: -</span>
-                    </div>
-                    <div class="chart-metrics">
-                      <div class="chart-metric">
-                        <span class="chart-metric-label">Price</span>
-                        <strong id="chart-price" class="chart-metric-value">-</strong>
-                      </div>
-                      <div class="chart-metric">
-                        <span class="chart-metric-label">Market Cap</span>
-                        <strong id="chart-marketcap" class="chart-metric-value">-</strong>
-                      </div>
-                      <div class="chart-metric">
-                        <span class="chart-metric-label">Liquidity</span>
-                        <strong id="chart-liquidity" class="chart-metric-value">-</strong>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="chart-actions">
-                    <div class="chart-timeframes" id="chart-timeframes">
-                      <button class="timeframe-btn is-active" type="button" data-timeframe="5m">5m</button>
-                      <button class="timeframe-btn" type="button" data-timeframe="15m">15m</button>
-                      <button class="timeframe-btn" type="button" data-timeframe="1h">1h</button>
-                      <button class="timeframe-btn" type="button" data-timeframe="4h">4h</button>
-                      <button class="timeframe-btn" type="button" data-timeframe="1d">1d</button>
-                    </div>
-                    <a id="chart-link" class="chart-link" target="_blank" rel="noreferrer">Open Market</a>
-                  </div>
-                </div>
-                <p id="chart-status" class="chart-status hidden"></p>
-                <div class="chart-frame-wrap">
-                  <div id="chart-frame" class="chart-frame"></div>
-                </div>
-              </section>
-            </section>
-
-            <section class="tab-panel hidden" id="panel-market">
-              <div class="summary-grid" id="market-grid"></div>
-            </section>
-
-            <section class="tab-panel hidden" id="panel-raw">
-              <details class="raw is-open">
-                <summary>Raw response</summary>
-                <pre id="raw-output"></pre>
-              </details>
-            </section>
-          </section>
+          </div>
         </div>
+      </section>
+
+      <section id="result" class="result hidden">
+        <div id="hero-result" class="hero-result hidden">
+          <div id="logo-shell" class="logo-shell hidden">
+            <div class="logo-ring"></div>
+            <img id="token-logo" class="token-logo hidden" alt="Token logo" />
+          </div>
+          <div class="hero-meta">
+            <p id="result-name" class="result-name"></p>
+            <div class="action-row">
+              <button id="copy-ca" class="ghost-btn" type="button">Copy CA</button>
+              <button id="copy-link" class="ghost-btn" type="button">Copy Link</button>
+              <a id="open-fourmeme" class="ghost-btn link-btn hidden" target="_blank" rel="noreferrer">Open Four.meme</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="tabs" id="tabs">
+          <button class="tab-btn is-active" type="button" data-tab="overview">Overview</button>
+          <button class="tab-btn" type="button" data-tab="market">Market</button>
+          <button class="tab-btn" type="button" data-tab="raw">Raw</button>
+        </div>
+
+        <div id="skeleton-grid" class="summary-grid hidden"></div>
+
+        <section class="tab-panel" id="panel-overview">
+          <div class="summary-grid" id="overview-grid"></div>
+
+          <section id="sakura-shell" class="sakura-shell hidden">
+            <div class="sakura-layout">
+              <div class="sakura-visual">
+                <div class="sakura-figure-shell">
+                  <img id="sakura-figure" class="sakura-figure" src="/assets/sakura-neutral.png" alt="Sakura" />
+                </div>
+              </div>
+              <div class="sakura-content">
+                <div class="sakura-head">
+                  <div>
+                    <p class="sakura-eyebrow">Sakura Agent</p>
+                    <h2 class="sakura-title">Trader Read</h2>
+                  </div>
+                  <div id="sakura-verdict" class="sakura-verdict">-</div>
+                </div>
+                <div class="sakura-bubble">
+                  <p id="sakura-summary" class="sakura-summary"></p>
+                </div>
+                <div class="sakura-grid">
+                  <article class="sakura-card">
+                    <p class="sakura-card-label">Why Sakura would ape</p>
+                    <ul id="sakura-reasons" class="sakura-list"></ul>
+                  </article>
+                  <article class="sakura-card">
+                    <p class="sakura-card-label">Why Sakura would fade</p>
+                    <ul id="sakura-cautions" class="sakura-list"></ul>
+                  </article>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section id="chart-shell" class="chart-shell hidden">
+            <div class="chart-head">
+              <div class="chart-head-main">
+                <p class="chart-title">Petal Chart</p>
+                <div class="chart-ribbon">
+                  <span id="chart-trend-chip" class="chart-chip">Trend: -</span>
+                  <span id="chart-timeframe-chip" class="chart-chip">TF: 15m</span>
+                  <span id="chart-candle-chip" class="chart-chip">Candles: -</span>
+                </div>
+                <div class="chart-metrics">
+                  <div class="chart-metric">
+                    <span class="chart-metric-label">Price</span>
+                    <strong id="chart-price" class="chart-metric-value">-</strong>
+                  </div>
+                  <div class="chart-metric">
+                    <span class="chart-metric-label">Market Cap</span>
+                    <strong id="chart-marketcap" class="chart-metric-value">-</strong>
+                  </div>
+                  <div class="chart-metric">
+                    <span class="chart-metric-label">Liquidity</span>
+                    <strong id="chart-liquidity" class="chart-metric-value">-</strong>
+                  </div>
+                </div>
+              </div>
+              <div class="chart-actions">
+                <div class="chart-timeframes" id="chart-timeframes">
+                  <button class="timeframe-btn is-active" type="button" data-timeframe="5m">5m</button>
+                  <button class="timeframe-btn" type="button" data-timeframe="15m">15m</button>
+                  <button class="timeframe-btn" type="button" data-timeframe="1h">1h</button>
+                  <button class="timeframe-btn" type="button" data-timeframe="4h">4h</button>
+                  <button class="timeframe-btn" type="button" data-timeframe="1d">1d</button>
+                </div>
+                <a id="chart-link" class="chart-link" target="_blank" rel="noreferrer">Open Market</a>
+              </div>
+            </div>
+            <p id="chart-status" class="chart-status hidden"></p>
+            <div class="chart-frame-wrap">
+              <div id="chart-frame" class="chart-frame"></div>
+            </div>
+          </section>
+        </section>
+
+        <section class="tab-panel hidden" id="panel-market">
+          <div class="summary-grid" id="market-grid"></div>
+        </section>
+
+        <section class="tab-panel hidden" id="panel-raw">
+          <details class="raw is-open">
+            <summary>Raw response</summary>
+            <pre id="raw-output"></pre>
+          </details>
+        </section>
       </section>
     </main>
 
     <script src="/app.js" type="module"></script>
+    <script type="module">
+      const heroStart = document.querySelector("#hero-start");
+      const heroInput = document.querySelector("#ca-input");
+      heroStart?.addEventListener("click", () => heroInput?.focus());
+    </script>
   </body>
 </html>
