@@ -198,11 +198,7 @@ async function renderSakura(address) {
     sakuraShell.classList.add(analysis.verdict === "bullish" ? "is-bullish" : "is-bearish");
     setSakuraFigure(analysis.verdict === "bullish" ? "bullish" : "bearish");
     sakuraSummary.textContent = agent.answer || analysis.summary;
-    fillSakuraList(
-      sakuraReasons,
-      Array.isArray(agent.nextActions) && agent.nextActions.length ? agent.nextActions : analysis.reasons,
-      "Sakura does not see enough clean bullish signals yet.",
-    );
+    fillSakuraList(sakuraReasons, analysis.reasons, "Sakura does not see enough clean bullish signals yet.");
     fillSakuraList(sakuraCautions, analysis.cautions, "No major danger signal is visible right now.");
   } catch (error) {
     sakuraVerdict.textContent = "Offline";
