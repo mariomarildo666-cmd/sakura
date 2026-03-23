@@ -133,6 +133,12 @@ body::after {
   box-shadow: 0 12px 24px rgba(176, 146, 102, 0.12);
 }
 
+.rail-icon {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
 .side-rail .rail-link,
 .side-rail .rail-link:visited,
 .side-rail .rail-link:hover,
