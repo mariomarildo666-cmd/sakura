@@ -137,6 +137,8 @@ async function analyzeWithHuggingFace(
     });
 
     if (!response.ok) {
+      const detail = await response.text();
+      console.error(`[sakura:hf] ${response.status} ${response.statusText} ${detail}`.trim());
       return null;
     }
 
@@ -168,7 +170,8 @@ async function analyzeWithHuggingFace(
       engine: "huggingface" as const,
       model,
     };
-  } catch {
+  } catch (error) {
+    console.error("[sakura:hf] request failed", error);
     return null;
   }
 }
