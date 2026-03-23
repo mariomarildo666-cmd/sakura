@@ -1,45 +1,59 @@
+# Sakura
+
 ```text
-███████╗ █████╗ ██╗  ██╗██╗   ██╗██████╗  █████╗
-██╔════╝██╔══██╗██║ ██╔╝██║   ██║██╔══██╗██╔══██╗
-███████╗███████║█████╔╝ ██║   ██║██████╔╝███████║
-╚════██║██╔══██║██╔═██╗ ██║   ██║██╔══██╗██╔══██║
-███████║██║  ██║██║  ██╗╚██████╔╝██║  ██║██║  ██║
-╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝
+   /)  /)
+  ( ^-^)   sakura terminal
+ c(")(")   meme coin reads for chaotic traders
 ```
 
 ```text
-┌──────────────────────────────────────────────────────────────┐
-│ BSC AGENT STACK // FOUR.MEME LAUNCHER // CA INTEL // CHARTS │
-└──────────────────────────────────────────────────────────────┘
+╭──────────────────────────────────────────────────────────────╮
+│  SAKURA // FOUR.MEME OPS // CA LOOKUP // MEME COIN READER   │
+╰──────────────────────────────────────────────────────────────╯
 ```
 
-Sakura is a hard-edged BSC meme ops toolkit built for launch flows, contract intelligence, and live token interfaces.
+Sakura is a cute BSC meme coin terminal built around two things:
 
-It does two jobs cleanly:
+- launching through the documented Four.meme flow
+- reading any contract address through a stylized lookup dashboard
 
-- launches tokens through the documented Four.meme flow
-- turns any contract address into a live token intelligence surface with market data and native charts
+It is part launcher, part CA intelligence tool, part anime trader product.
 
-## What It Does
+## What Sakura Does
 
-- Four.meme launch flow
-- wallet sign-in and nonce flow
-- token image upload
-- create payload + signature handling
-- on-chain `createToken` execution
-- symbol candidate testing
-- contract address lookup UI
-- Four.meme REST + on-chain data merge
+- Four.meme launch flow with wallet sign-in and create payload handling
+- token image upload and launch execution
+- symbol candidate checking
+- CA lookup from Four.meme REST + on-chain token info
 - DexScreener pair discovery
-- native candlestick chart rendering
+- DexScreener chart embed inside the app
+- Sakura verdicts with OpenAI first, heuristic fallback second
+- recent global searches shown inside the UI
+- shareable lookup URLs via `?ca=...`
+
+## Current Product Feel
+
+```text
+search ca -> read token -> let sakura react -> open market -> share result
+```
+
+The web app currently includes:
+
+- top-level CA search
+- token identity cards
+- contract / creator / socials view
+- Sakura analysis panel with character states
+- market panel
+- raw payload inspector
+- recent searches visible to all visitors on the running service
 
 ## Stack
 
 - Node.js
 - TypeScript
 - `viem`
-- Four.meme official integration package
-- lightweight-charts
+- `@four-meme/four-meme-ai`
+- Four.meme protocol integration flow
 
 ## Local Setup
 
@@ -49,14 +63,14 @@ copy .env.example .env
 copy token.example.json token.json
 ```
 
-Fill `.env`:
+Fill `.env` with what you need:
 
 - `PRIVATE_KEY`
 - `BSC_RPC_URL`
 - `OPENAI_API_KEY`
 - optional: `OPENAI_MODEL` default is `gpt-5.4-mini`
 
-`token.json` is intentionally ignored locally, so your live launch config stays private.
+`token.json` is ignored locally so live launch configs stay private.
 
 ## Commands
 
@@ -78,7 +92,7 @@ Lookup by contract address:
 npm run ca -- 0xYourContractAddress
 ```
 
-Run the web app:
+Run the website:
 
 ```bash
 npm start
@@ -86,7 +100,7 @@ npm start
 
 Open:
 
-```bash
+```text
 http://localhost:3000
 ```
 
@@ -96,46 +110,46 @@ Docker:
 docker compose up --build
 ```
 
-## Web App
-
-The UI currently includes:
-
-- CA input and instant lookup
-- token identity panel
-- contract + creator view
-- website / twitter / telegram links
-- Four.meme + chain data merge
-- native chart with timeframe switching
-- Sakura analysis with OpenAI fallback to local heuristics
-- raw response inspector
-
 ## Deploy
 
-Best simple deploy target: Render Web Service.
+Best simple target:
+
+- Render Web Service
 
 Suggested settings:
 
 - Build Command: `npm install`
 - Start Command: `npm start`
 
-If needed, add environment variables in Render:
+Useful environment variables:
 
 - `BSC_RPC_URL`
 - `OPENAI_API_KEY`
 - optional: `OPENAI_MODEL`
 
-## Repo Structure
+## Repo Map
 
 ```text
-public/              frontend
-src/server.ts        web server
-src/launch.ts        Four.meme launcher
-src/ca.ts            CLI CA lookup
-src/lib/ca-lookup.ts data aggregation + chart feeds
+public/                  frontend ui
+public/assets/           sakura art
+src/server.ts            web server + api routes
+src/launch.ts            Four.meme launcher
+src/ca.ts                CLI CA lookup
+src/agents/sakura.ts     Sakura analysis logic
+src/lib/ca-lookup.ts     token aggregation + market discovery
 ```
 
 ## Notes
 
-- The launch path is currently centered on the BNB quote pair.
-- The chart layer uses live discovered pairs and external OHLCV market data.
-- The UI is positioned to evolve into a broader AI agent product, not just a launcher.
+- the launch path is centered on the BNB quote pair
+- the chart panel currently uses DexScreener embed
+- recent searches are global for the running service, but memory-based
+- if the server restarts, recent searches reset
+- Sakura is being shaped into a broader meme coin agent product over time
+
+## Vibe
+
+```text
+Sakura does not do polite research.
+Sakura reads the coin, judges the vibe, and tells you if it feels shillable.
+```
