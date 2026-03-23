@@ -121,6 +121,8 @@ body::after {
 }
 
 .rail-btn {
+  display: grid;
+  place-items: center;
   width: 52px;
   height: 52px;
   border-radius: 999px;
@@ -129,6 +131,12 @@ body::after {
   color: #7b6d62;
   font-size: 18px;
   box-shadow: 0 12px 24px rgba(176, 146, 102, 0.12);
+}
+
+.rail-link {
+  text-decoration: none;
+  font-weight: 800;
+  letter-spacing: 0.04em;
 }
 
 .rail-btn.is-active {

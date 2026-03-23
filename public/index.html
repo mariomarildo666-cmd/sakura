@@ -18,11 +18,13 @@
     <div class="bg-grid"></div>
     <main class="shell">
       <section class="dashboard">
-        <aside class="side-rail" aria-hidden="true">
-          <button class="rail-btn is-active" type="button">✿</button>
-          <button class="rail-btn" type="button">◌</button>
-          <button class="rail-btn" type="button">⌘</button>
-          <button class="rail-btn" type="button">◍</button>
+        <aside class="side-rail" aria-label="Quick links">
+          <button class="rail-btn is-active" type="button" aria-label="Home">✿</button>
+          <a class="rail-btn rail-link" href="https://x.com/" target="_blank" rel="noreferrer" aria-label="Open X">
+            X
+          </a>
+          <button class="rail-btn" type="button" aria-label="Shortcut">⌘</button>
+          <button class="rail-btn" type="button" aria-label="Signal">◍</button>
         </aside>
 
         <div class="dashboard-panel">
@@ -69,7 +71,7 @@
                 <div class="logo-ring"></div>
                 <img id="token-logo" class="token-logo hidden" alt="Token logo" />
               </div>
-            <div class="hero-meta">
+              <div class="hero-meta">
                 <p id="result-name" class="result-name"></p>
                 <div class="action-row">
                   <button id="copy-ca" class="ghost-btn" type="button">Copy CA</button>
@@ -179,4 +181,4 @@
 
     <script src="/app.js" type="module"></script>
   </body>
-  </html>
+</html>
