@@ -9,6 +9,16 @@ import { fetchChartCandlesForTimeframe, lookupCa } from "./lib/ca-lookup.js";
 
 const PORT = Number(process.env.PORT || 3000);
 const PUBLIC_DIR = path.resolve("public");
+const RECENT_LIMIT = 8;
+
+type RecentSearch = {
+  tokenAddress: string;
+  name: string | null;
+  symbol: string | null;
+  searchedAt: string;
+};
+
+const recentSearches: RecentSearch[] = [];
 
 const MIME_TYPES: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
@@ -33,7 +43,18 @@ const server = createServer(async (req, res) => {
       }
 
       const result = await lookupCa(address);
+      pushRecentSearch({
+        tokenAddress: result.tokenAddress,
+        name: result.summary.name,
+        symbol: result.summary.symbol,
+        searchedAt: new Date().toISOString(),
+      });
       sendJson(res, 200, result);
+      return;
+    }
+
+    if (url.pathname === "/api/recent") {
+      sendJson(res, 200, { items: recentSearches });
       return;
     }
 
@@ -94,4 +115,11 @@ function resolvePublicPath(urlPath: string) {
 function sendJson(res: ServerResponse, status: number, body: unknown) {
   res.writeHead(status, { "Content-Type": "application/json; charset=utf-8" });
   res.end(JSON.stringify(body));
+}
+
+function pushRecentSearch(next: RecentSearch) {
+  const normalized = next.tokenAddress.toLowerCase();
+  const deduped = recentSearches.filter((item) => item.tokenAddress.toLowerCase() !== normalized);
+  recentSearches.length = 0;
+  recentSearches.push(next, ...deduped.slice(0, RECENT_LIMIT - 1));
 }
