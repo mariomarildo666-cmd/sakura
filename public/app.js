@@ -18,6 +18,7 @@ const logoShell = document.querySelector("#logo-shell");
 const tokenLogo = document.querySelector("#token-logo");
 const resultName = document.querySelector("#result-name");
 const copyCa = document.querySelector("#copy-ca");
+const copyLink = document.querySelector("#copy-link");
 const openFourmeme = document.querySelector("#open-fourmeme");
 const sakuraShell = document.querySelector("#sakura-shell");
 const sakuraFigure = document.querySelector("#sakura-figure");
@@ -32,6 +33,9 @@ const chartStatus = document.querySelector("#chart-status");
 const chartPrice = document.querySelector("#chart-price");
 const chartMarketCap = document.querySelector("#chart-marketcap");
 const chartLiquidity = document.querySelector("#chart-liquidity");
+const chartTrendChip = document.querySelector("#chart-trend-chip");
+const chartTimeframeChip = document.querySelector("#chart-timeframe-chip");
+const chartCandleChip = document.querySelector("#chart-candle-chip");
 const timeframeButtons = Array.from(document.querySelectorAll(".timeframe-btn"));
 const tabs = Array.from(document.querySelectorAll(".tab-btn"));
 const panels = {
@@ -119,6 +123,7 @@ form.addEventListener("submit", async (event) => {
     }
 
     await renderResult(data);
+    syncShareUrl(address);
     status.textContent = "Lookup complete.";
   } catch (error) {
     status.textContent = error instanceof Error ? error.message : "Lookup failed.";
@@ -177,8 +182,10 @@ async function renderSakura(address) {
   sakuraShell.classList.remove("hidden");
   sakuraVerdict.className = "sakura-verdict";
   sakuraVerdict.textContent = "Reading";
+  sakuraShell.classList.remove("is-bullish", "is-bearish");
   setSakuraFigure("neutral");
-  sakuraSummary.textContent = "Sakura is checking the chart, liquidity, and visible danger signals for the trader.";
+  sakuraSummary.textContent =
+    "Sakura is staring at the candles and deciding whether this thing belongs on the timeline or in the mute list.";
   sakuraReasons.innerHTML = "";
   sakuraCautions.innerHTML = "";
 
@@ -192,12 +199,14 @@ async function renderSakura(address) {
 
     sakuraVerdict.textContent = analysis.verdict;
     sakuraVerdict.classList.add(analysis.verdict === "bullish" ? "is-bullish" : "is-bearish");
+    sakuraShell.classList.add(analysis.verdict === "bullish" ? "is-bullish" : "is-bearish");
     setSakuraFigure(analysis.verdict === "bullish" ? "bullish" : "bearish");
     sakuraSummary.textContent = analysis.summary;
     fillSakuraList(sakuraReasons, analysis.reasons, "Sakura does not see enough clean bullish signals yet.");
     fillSakuraList(sakuraCautions, analysis.cautions, "No major danger signal is visible right now.");
   } catch (error) {
     sakuraVerdict.textContent = "Offline";
+    sakuraShell.classList.remove("is-bullish", "is-bearish");
     setSakuraFigure("neutral");
     sakuraSummary.textContent = error instanceof Error ? error.message : "Sakura analysis failed.";
     fillSakuraList(sakuraReasons, [], "No analysis points available.");
@@ -262,9 +271,10 @@ async function renderChart(data) {
   chartPrice.textContent = formatUsd(data.dexScreener?.priceUsd);
   chartMarketCap.textContent = formatCompactMoney(data.dexScreener?.marketCap);
   chartLiquidity.textContent = formatCompactMoney(data.dexScreener?.liquidityUsd);
+  chartTimeframeChip.textContent = `TF: ${currentTimeframe}`;
   setTimeframeButtonsDisabled(true);
 
-  chartStatus.textContent = "Loading chart data...";
+  chartStatus.textContent = "Sakura is dusting off the candles...";
   chartStatus.classList.remove("hidden");
 
   try {
@@ -283,6 +293,7 @@ async function renderChart(data) {
 
     if (!Array.isArray(chartData.candles) || chartData.candles.length === 0) {
       chartStatus.textContent = "No candle data found for this token yet.";
+      setChartRibbon(null);
       clearChartData();
       setTimeframeButtonsDisabled(false);
       return;
@@ -291,6 +302,7 @@ async function renderChart(data) {
     chartLink.href = chartData.dexUrl || chartLink.href;
     chartStatus.classList.add("hidden");
     chartStatus.textContent = "";
+    setChartRibbon(chartData.candles);
     drawChart(chartData.candles);
   } catch (error) {
     if (requestId !== chartRequestId) {
@@ -298,6 +310,7 @@ async function renderChart(data) {
     }
     chartStatus.textContent = error instanceof Error ? error.message : "Chart failed to load.";
     chartStatus.classList.remove("hidden");
+    setChartRibbon(null);
     clearChartData();
   } finally {
     if (requestId === chartRequestId) {
@@ -485,6 +498,9 @@ function resetChartMetrics() {
   chartPrice.textContent = "-";
   chartMarketCap.textContent = "-";
   chartLiquidity.textContent = "-";
+  chartTrendChip.textContent = "Trend: -";
+  chartTimeframeChip.textContent = `TF: ${currentTimeframe}`;
+  chartCandleChip.textContent = "Candles: -";
 }
 
 function createStat(label, value) {
@@ -695,6 +711,15 @@ copyCa.addEventListener("click", async () => {
   }, 1200);
 });
 
+copyLink.addEventListener("click", async () => {
+  if (!lastResult?.tokenAddress) return;
+  await navigator.clipboard.writeText(makeShareUrl(lastResult.tokenAddress));
+  copyLink.textContent = "Copied";
+  setTimeout(() => {
+    copyLink.textContent = "Copy Link";
+  }, 1200);
+});
+
 input.addEventListener("paste", (event) => {
   const pasted = event.clipboardData?.getData("text") || "";
   const address = extractAddress(pasted);
@@ -710,6 +735,12 @@ tabs.forEach((button) => {
   });
 });
 
+const initialAddress = extractAddress(new URL(window.location.href).searchParams.get("ca") || "");
+if (initialAddress) {
+  input.value = initialAddress;
+  queueMicrotask(() => form.requestSubmit());
+}
+
 function selectTab(name) {
   tabs.forEach((button) => {
     button.classList.toggle("is-active", button.dataset.tab === name);
@@ -718,4 +749,31 @@ function selectTab(name) {
   Object.entries(panels).forEach(([key, panel]) => {
     panel.classList.toggle("hidden", key !== name);
   });
+}
+
+function setChartRibbon(candles) {
+  if (!Array.isArray(candles) || candles.length === 0) {
+    chartTrendChip.textContent = "Trend: -";
+    chartCandleChip.textContent = "Candles: -";
+    return;
+  }
+
+  const first = candles[0]?.open || candles[0]?.close || 0;
+  const last = candles[candles.length - 1]?.close || 0;
+  const changePct = first > 0 ? ((last - first) / first) * 100 : 0;
+  const direction = changePct >= 0 ? "Bullish" : "Bearish";
+  chartTrendChip.textContent = `Trend: ${direction} ${Math.abs(changePct).toFixed(2)}%`;
+  chartCandleChip.textContent = `Candles: ${candles.length}`;
+}
+
+function makeShareUrl(address) {
+  const url = new URL(window.location.href);
+  url.searchParams.set("ca", address);
+  return url.toString();
+}
+
+function syncShareUrl(address) {
+  const url = new URL(window.location.href);
+  url.searchParams.set("ca", address);
+  window.history.replaceState({}, "", url);
 }

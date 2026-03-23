@@ -69,10 +69,11 @@
                 <div class="logo-ring"></div>
                 <img id="token-logo" class="token-logo hidden" alt="Token logo" />
               </div>
-              <div class="hero-meta">
+            <div class="hero-meta">
                 <p id="result-name" class="result-name"></p>
                 <div class="action-row">
                   <button id="copy-ca" class="ghost-btn" type="button">Copy CA</button>
+                  <button id="copy-link" class="ghost-btn" type="button">Copy Link</button>
                   <a id="open-fourmeme" class="ghost-btn link-btn hidden" target="_blank" rel="noreferrer">Open Four.meme</a>
                 </div>
               </div>
@@ -92,6 +93,11 @@
                 <div class="chart-head">
                   <div class="chart-head-main">
                     <p class="chart-title">Petal Chart</p>
+                    <div class="chart-ribbon">
+                      <span id="chart-trend-chip" class="chart-chip">Trend: -</span>
+                      <span id="chart-timeframe-chip" class="chart-chip">TF: 15m</span>
+                      <span id="chart-candle-chip" class="chart-chip">Candles: -</span>
+                    </div>
                     <div class="chart-metrics">
                       <div class="chart-metric">
                         <span class="chart-metric-label">Price</span>
@@ -138,7 +144,9 @@
                       </div>
                       <div id="sakura-verdict" class="sakura-verdict">-</div>
                     </div>
-                    <p id="sakura-summary" class="sakura-summary"></p>
+                    <div class="sakura-bubble">
+                      <p id="sakura-summary" class="sakura-summary"></p>
+                    </div>
                     <div class="sakura-grid">
                       <article class="sakura-card">
                         <p class="sakura-card-label">Why Sakura would ape</p>
