@@ -36,7 +36,8 @@ It is part launcher, part CA intelligence tool, part anime trader product.
 - CA lookup from Four.meme REST + on-chain token info
 - DexScreener pair discovery
 - DexScreener chart embed inside the app
-- Sakura verdicts with Hugging Face first, heuristic fallback second
+- Sakura verdicts powered by Hugging Face
+- Sakura agent endpoint with `read`, `warn`, `tweet`, and `reply` modes
 - recent global searches shown inside the UI
 - shareable lookup URLs via `?ca=...`
 
@@ -114,6 +115,12 @@ Run the website:
 npm start
 ```
 
+Run Sakura agent mode directly:
+
+```bash
+curl "http://localhost:3000/api/sakura-agent?address=0xYourContractAddress&mode=read"
+```
+
 Create a reply draft for a tagged CA:
 
 ```bash
@@ -170,7 +177,9 @@ src/server.ts            web server + api routes
 src/launch.ts            Four.meme launcher
 src/ca.ts                CLI CA lookup
 src/x-bot.ts             X mention bot runner
+src/agents/sakura-agent.ts Sakura tool-based agent modes
 src/agents/sakura.ts     Sakura analysis logic
+src/agents/tools.ts      Sakura tool wrappers
 src/lib/ca-lookup.ts     token aggregation + market discovery
 src/lib/x-bot.ts         X auth, mention polling, and reply posting
 ```

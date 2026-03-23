@@ -4,6 +4,7 @@ import { createServer, ServerResponse } from "node:http";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { runSakuraAgent } from "./agents/sakura-agent.js";
 import { analyzeWithSakura } from "./agents/sakura.js";
 import { fetchChartCandlesForTimeframe, lookupCa } from "./lib/ca-lookup.js";
 
@@ -79,6 +80,21 @@ const server = createServer(async (req, res) => {
       }
 
       const result = await analyzeWithSakura(address);
+      sendJson(res, 200, result);
+      return;
+    }
+
+    if (url.pathname === "/api/sakura-agent") {
+      const address = url.searchParams.get("address")?.trim() || "";
+      const mode = url.searchParams.get("mode")?.trim() || "read";
+      const question = url.searchParams.get("question")?.trim() || undefined;
+      const username = url.searchParams.get("username")?.trim() || undefined;
+      if (!address) {
+        sendJson(res, 400, { error: "address query is required" });
+        return;
+      }
+
+      const result = await runSakuraAgent({ address, mode: mode as "read" | "warn" | "tweet" | "reply", question, username });
       sendJson(res, 200, result);
       return;
     }
