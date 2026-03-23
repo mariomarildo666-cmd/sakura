@@ -246,11 +246,14 @@ function renderSakuraScorecard(scorecard) {
 
   sakuraScorecard.innerHTML = "";
   for (const [label, value] of entries) {
+    const publicScore = toPublicScore(label, value);
+    const descriptor = describeScore(label, publicScore);
     const chip = document.createElement("div");
     chip.className = "sakura-score-chip";
     chip.innerHTML = `
       <span class="sakura-score-label">${escapeHtml(label)}</span>
-      <strong class="sakura-score-value">${formatMiniScore(value)}</strong>
+      <strong class="sakura-score-value">${publicScore}/10</strong>
+      <span class="sakura-score-note">${escapeHtml(descriptor)}</span>
     `;
     sakuraScorecard.appendChild(chip);
   }
@@ -488,6 +491,50 @@ function formatMiniScore(value) {
   const number = Number(value);
   if (!Number.isFinite(number)) return "0";
   return number > 0 ? `+${number}` : String(number);
+}
+
+function toPublicScore(label, value) {
+  const number = Number(value);
+  const clamped = Number.isFinite(number) ? Math.max(-2, Math.min(2, number)) : 0;
+  const mapped = Math.round(((clamped + 2) / 4) * 10);
+
+  if (label === "Danger") {
+    return mapped;
+  }
+
+  return mapped;
+}
+
+function describeScore(label, score) {
+  if (label === "Name Vibe") {
+    if (score >= 8) return "easy shill";
+    if (score >= 6) return "pretty sticky";
+    if (score >= 4) return "mid vibe";
+    return "weak branding";
+  }
+
+  if (label === "Social Heat") {
+    if (score >= 8) return "feed is live";
+    if (score >= 6) return "some pulse";
+    if (score >= 4) return "still sleepy";
+    return "dead socials";
+  }
+
+  if (label === "Chart Heat") {
+    if (score >= 8) return "sending";
+    if (score >= 6) return "warming up";
+    if (score >= 4) return "still chop";
+    return "chart looks cooked";
+  }
+
+  if (label === "Danger") {
+    if (score >= 8) return "high risk";
+    if (score >= 6) return "spicy";
+    if (score >= 4) return "manageable";
+    return "low danger";
+  }
+
+  return "";
 }
 
 function applyMetricTone(item, label) {

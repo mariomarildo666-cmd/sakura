@@ -89,20 +89,20 @@ function buildAgentAnswer(
 
   switch (mode) {
     case "warn":
-      return `Sakura warning pass on ${nameLine}: this one smells shaky. Biggest red flag is ${primaryCaution}. If you ape here, don't act surprised when the chart turns into chop.`;
+      return `Sakura warning pass on ${nameLine}: not gonna lie, this one smells shaky. Biggest red flag is ${primaryCaution}. If you ape this blind and it turns into chop, that's on you.`;
     case "tweet":
       return tweetDraft
-        ? `Tweet mode is live for ${nameLine}. Sakura cooked a ${analysis.verdict} post around ${primaryReason}.`
+        ? `Tweet mode is live for ${nameLine}. Sakura cooked a ${analysis.verdict} post around ${primaryReason}. Good enough to farm the timeline a bit.`
         : `Tweet draft unavailable for ${name}.`;
     case "reply":
       return tweetDraft
-        ? `Reply mode ready for ${nameLine}. Sakura built a ${analysis.verdict} clapback around ${primaryReason}.`
+        ? `Reply mode ready for ${nameLine}. Sakura built a ${analysis.verdict} clapback around ${primaryReason}. Clean enough for a fast mention reply.`
         : `Reply mode unavailable for ${name}.`;
     case "read":
     default:
       return question
         ? `Sakura read for "${question}": ${analysis.summary} Cleanest angle is ${primaryReason}. Main risk is ${primaryCaution}.`
-        : `${analysis.summary} Cleanest angle is ${primaryReason}. Main risk is ${primaryCaution}.`;
+        : `${analysis.summary} Best part is ${primaryReason}. Main thing that still annoys me is ${primaryCaution}.`;
   }
 }
 
