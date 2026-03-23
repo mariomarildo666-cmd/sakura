@@ -32,9 +32,8 @@ body {
   font-family: var(--ui);
   color: var(--text);
   background:
-    radial-gradient(circle at 12% 24%, rgba(255, 217, 232, 0.72), transparent 22%),
-    radial-gradient(circle at 84% 18%, rgba(255, 243, 213, 0.64), transparent 24%),
-    linear-gradient(180deg, #ebd4e1 0%, #f3e2ea 28%, #f8efe7 100%);
+    linear-gradient(180deg, rgba(255, 245, 249, 0.62), rgba(255, 245, 249, 0.62)),
+    url("/assets/background-sakura.png") center / cover no-repeat fixed;
   overflow-x: hidden;
 }
 
@@ -72,11 +71,11 @@ body::after {
 }
 
 .backdrop-a {
-  background: radial-gradient(circle at 18% 82%, rgba(244, 190, 214, 0.42), transparent 24%);
+  background: radial-gradient(circle at 18% 82%, rgba(244, 190, 214, 0.18), transparent 24%);
 }
 
 .backdrop-b {
-  background: radial-gradient(circle at 84% 70%, rgba(255, 228, 193, 0.34), transparent 20%);
+  background: radial-gradient(circle at 84% 70%, rgba(255, 228, 193, 0.16), transparent 20%);
 }
 
 .backdrop-grid {
