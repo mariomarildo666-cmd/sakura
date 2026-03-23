@@ -290,7 +290,12 @@ async function renderChart(data) {
       return;
     }
 
-    if (!Array.isArray(chartData.candles) || chartData.candles.length === 0) {
+    let candles = Array.isArray(chartData.candles) ? chartData.candles : [];
+    if (candles.length === 0 && chartData.pairAddress) {
+      candles = await fetchClientSideCandles(chartData.pairAddress, currentTimeframe);
+    }
+
+    if (!Array.isArray(candles) || candles.length === 0) {
       chartStatus.textContent = "No candle data found for this token yet.";
       setChartRibbon(null);
       clearChartData();
@@ -301,8 +306,8 @@ async function renderChart(data) {
     chartLink.href = chartData.dexUrl || chartLink.href;
     chartStatus.classList.add("hidden");
     chartStatus.textContent = "";
-    setChartRibbon(chartData.candles);
-    drawChart(chartData.candles);
+    setChartRibbon(candles);
+    drawChart(candles);
   } catch (error) {
     if (requestId !== chartRequestId) {
       return;
@@ -775,4 +780,55 @@ function syncShareUrl(address) {
   const url = new URL(window.location.href);
   url.searchParams.set("ca", address);
   window.history.replaceState({}, "", url);
+}
+
+async function fetchClientSideCandles(pairAddress, timeframe) {
+  try {
+    const config = getOhlcvConfig(timeframe);
+    const response = await fetch(
+      `https://api.geckoterminal.com/api/v2/networks/bsc/pools/${encodeURIComponent(pairAddress)}/ohlcv/${config.path}?aggregate=${config.aggregate}&limit=${config.limit}`,
+      {
+        headers: {
+          Accept: "application/json",
+        },
+      },
+    );
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const json = await response.json();
+    const list = json?.data?.attributes?.ohlcv_list;
+    if (!Array.isArray(list)) {
+      return [];
+    }
+
+    return [...list].reverse().map(([time, open, high, low, close, volume]) => ({
+      time,
+      open,
+      high,
+      low,
+      close,
+      volume,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+function getOhlcvConfig(timeframe) {
+  switch (timeframe) {
+    case "5m":
+      return { path: "minute", aggregate: 5, limit: 120 };
+    case "1h":
+      return { path: "hour", aggregate: 1, limit: 120 };
+    case "4h":
+      return { path: "hour", aggregate: 4, limit: 120 };
+    case "1d":
+      return { path: "day", aggregate: 1, limit: 90 };
+    case "15m":
+    default:
+      return { path: "minute", aggregate: 15, limit: 120 };
+  }
 }
