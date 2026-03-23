@@ -166,7 +166,8 @@ body::after {
 .topbar {
   position: relative;
   z-index: 1;
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(360px, 540px);
   justify-content: space-between;
   align-items: center;
   gap: 20px;
@@ -275,38 +276,6 @@ h1 {
   box-shadow: 0 18px 34px rgba(165, 142, 102, 0.14);
   position: relative;
   overflow: hidden;
-}
-
-.hero-lookup {
-  margin-top: 26px;
-  max-width: 560px;
-  padding: 12px;
-  border-color: rgba(255, 255, 255, 0.82);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(255, 248, 241, 0.84)),
-    rgba(255, 255, 255, 0.76);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.88),
-    0 24px 48px rgba(188, 160, 111, 0.16);
-}
-
-.hero-lookup input {
-  min-height: 62px;
-  padding: 18px 22px;
-  font-size: 24px;
-  color: #8f6f88;
-  background: rgba(255, 255, 255, 0.78);
-}
-
-.hero-lookup input::placeholder {
-  color: #bf93ad;
-}
-
-.hero-lookup button {
-  min-width: 150px;
-  min-height: 62px;
-  font-size: 24px;
-  border-radius: 999px;
 }
 
 .lookup-card::before {
@@ -1168,6 +1137,10 @@ h1 {
     display: none;
   }
 
+  .topbar {
+    grid-template-columns: 1fr;
+  }
+
   .hero {
     grid-template-columns: 1fr;
     min-height: auto;
@@ -1231,16 +1204,6 @@ h1 {
   .lookup-card {
     grid-template-columns: 1fr;
     border-radius: 24px;
-  }
-
-  .hero-lookup {
-    max-width: none;
-  }
-
-  .hero-lookup input,
-  .hero-lookup button {
-    font-size: 20px;
-    min-height: 56px;
   }
 
   .hero-result {
