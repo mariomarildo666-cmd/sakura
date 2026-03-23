@@ -3,6 +3,7 @@ const input = document.querySelector("#ca-input");
 const status = document.querySelector("#status");
 const historyShell = document.querySelector("#history-shell");
 const historyList = document.querySelector("#history-list");
+const homeRail = document.querySelector(".rail-home");
 const result = document.querySelector("#result");
 const overviewGrid = document.querySelector("#overview-grid");
 const marketGrid = document.querySelector("#market-grid");
@@ -125,6 +126,11 @@ form.addEventListener("submit", async (event) => {
 
 timeframeButtons.forEach((button) => {
   button.addEventListener("click", () => {});
+});
+
+homeRail.addEventListener("click", (event) => {
+  event.preventDefault();
+  resetHomeView();
 });
 
 async function renderResult(data) {
@@ -576,6 +582,28 @@ function syncShareUrl(address) {
   const url = new URL(window.location.href);
   url.searchParams.set("ca", address);
   window.history.replaceState({}, "", url);
+}
+
+function resetHomeView() {
+  const url = new URL(window.location.href);
+  url.searchParams.delete("ca");
+  window.history.replaceState({}, "", url);
+
+  input.value = "";
+  status.textContent = "";
+  lastResult = null;
+  result.classList.add("hidden");
+  heroResult.classList.add("hidden");
+  logoShell.classList.add("hidden");
+  chartShell.classList.add("hidden");
+  sakuraShell.classList.add("hidden");
+  chartStatus.classList.add("hidden");
+  chartStatus.textContent = "";
+  overviewGrid.innerHTML = "";
+  marketGrid.innerHTML = "";
+  rawOutput.innerHTML = "";
+  resetChartMetrics();
+  destroyChart();
 }
 
 async function renderRecentSearches() {
