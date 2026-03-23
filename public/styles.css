@@ -137,6 +137,12 @@ body::after {
   text-decoration: none;
   font-weight: 800;
   letter-spacing: 0.04em;
+  background: #0f0f12;
+  color: #ffffff;
+  border-color: rgba(15, 15, 18, 0.72);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 12px 24px rgba(15, 15, 18, 0.22);
 }
 
 .rail-btn.is-active {
