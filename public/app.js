@@ -502,10 +502,14 @@ async function renderRecentSearches() {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "history-chip";
+    const avatar = renderRecentAvatar(entry);
     button.innerHTML = `
-      <span class="history-chip-name">${escapeHtml(formatValue(entry.name))}</span>
-      <span class="history-chip-symbol">${escapeHtml(formatValue(entry.symbol))}</span>
-      <span class="history-chip-address">${shortenAddress(entry.tokenAddress)}</span>
+      <span class="history-chip-media">${avatar}</span>
+      <span class="history-chip-copy">
+        <span class="history-chip-name">${escapeHtml(formatValue(entry.name))}</span>
+        <span class="history-chip-symbol">${escapeHtml(formatValue(entry.symbol))}</span>
+        <span class="history-chip-address">${shortenAddress(entry.tokenAddress)}</span>
+      </span>
     `;
     button.addEventListener("click", () => {
       input.value = entry.tokenAddress;
@@ -523,6 +527,15 @@ function extractAddress(value) {
 function shortenAddress(address) {
   if (typeof address !== "string" || address.length < 10) return address || "-";
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
+}
+
+function renderRecentAvatar(entry) {
+  const initials = escapeHtml(makeAvatarText(entry?.name, entry?.symbol).slice(0, 1));
+  if (typeof entry?.logoUrl === "string" && entry.logoUrl.trim()) {
+    return `<img class="history-chip-avatar" src="${escapeHtml(entry.logoUrl)}" alt="${escapeHtml(formatValue(entry.name))} logo" loading="lazy" />`;
+  }
+
+  return `<span class="history-chip-avatar history-chip-avatar-fallback">${initials}</span>`;
 }
 
 function escapeHtml(value) {

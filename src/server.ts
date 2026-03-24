@@ -16,6 +16,7 @@ type RecentSearch = {
   tokenAddress: string;
   name: string | null;
   symbol: string | null;
+  logoUrl?: string | null;
   searchedAt: string;
 };
 
@@ -48,6 +49,7 @@ const server = createServer(async (req, res) => {
         tokenAddress: result.tokenAddress,
         name: result.summary.name,
         symbol: result.summary.symbol,
+        logoUrl: result.summary.logoUrl ?? null,
         searchedAt: new Date().toISOString(),
       });
       sendJson(res, 200, result);
