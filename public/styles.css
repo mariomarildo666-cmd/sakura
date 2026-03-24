@@ -1,19 +1,27 @@
 :root {
-  --text: #34252c;
-  --muted: rgba(90, 65, 76, 0.76);
-  --muted-soft: rgba(124, 96, 108, 0.58);
-  --pink: #f1a5c7;
-  --pink-strong: #e97ead;
+  --bg-main: #fcf7f9;
+  --card-main: #fffdfe;
+  --card-secondary: #f9f1f4;
+  --border-soft: #e9d7df;
+  --heading: #4b3741;
+  --body: #5f4b54;
+  --label: #b78497;
+  --text: var(--heading);
+  --muted: rgba(95, 75, 84, 0.84);
+  --muted-soft: rgba(108, 88, 97, 0.68);
+  --pink: #efb7cf;
+  --pink-strong: #d890b2;
   --gold: #efc35e;
   --gold-strong: #f1c55f;
-  --good: #4a7a5e;
-  --good-bg: rgba(233, 255, 242, 0.78);
-  --bad: #bf8da2;
-  --bad-bg: rgba(255, 244, 247, 0.82);
-  --panel: rgba(255, 249, 251, 0.62);
-  --panel-strong: rgba(255, 255, 255, 0.72);
-  --line: rgba(255, 255, 255, 0.74);
-  --shadow: rgba(191, 142, 165, 0.16);
+  --good: #406555;
+  --good-bg: #dff1e7;
+  --good-line: #b7dec6;
+  --bad: #8f6c7a;
+  --bad-bg: #f8eef2;
+  --panel: rgba(255, 253, 254, 0.72);
+  --panel-strong: rgba(255, 253, 254, 0.86);
+  --line: rgba(233, 215, 223, 0.92);
+  --shadow: rgba(156, 115, 133, 0.12);
   --mono: "IBM Plex Mono", monospace;
   --ui: "Rajdhani", "IBM Plex Mono", sans-serif;
   --display: "Cormorant Garamond", "Times New Roman", serif;
@@ -33,10 +41,10 @@ body {
   font-family: var(--ui);
   color: var(--text);
   background:
-    radial-gradient(circle at 12% 20%, rgba(255, 222, 235, 0.88), transparent 24%),
-    radial-gradient(circle at 82% 14%, rgba(255, 234, 203, 0.62), transparent 21%),
-    radial-gradient(circle at 68% 76%, rgba(241, 165, 199, 0.18), transparent 24%),
-    linear-gradient(135deg, #fff9fc 0%, #fff3f8 36%, #fff8fb 100%);
+    radial-gradient(circle at 12% 20%, rgba(255, 221, 234, 0.62), transparent 24%),
+    radial-gradient(circle at 82% 14%, rgba(255, 234, 203, 0.34), transparent 21%),
+    radial-gradient(circle at 68% 76%, rgba(239, 183, 207, 0.12), transparent 24%),
+    linear-gradient(135deg, var(--bg-main) 0%, #fff4f8 36%, #fff9fc 100%);
   overflow-x: hidden;
 }
 
@@ -111,10 +119,10 @@ body:has(#result.hidden) .shell {
   width: min(1220px, 100%);
   margin: 0 auto;
   padding: 28px 30px 30px;
-  border: 1px solid rgba(255, 255, 255, 0.7);
+  border: 1px solid var(--line);
   border-radius: 36px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.58), rgba(255, 253, 250, 0.34)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 253, 254, 0.54)),
     var(--panel);
   backdrop-filter: blur(18px);
   box-shadow:
@@ -220,7 +228,7 @@ body:has(#result.hidden) .shell {
 }
 
 .hero-brand {
-  color: var(--text);
+  color: var(--heading);
   text-decoration: none;
   font-family: var(--display);
   font-size: 28px;
@@ -240,9 +248,9 @@ body:has(#result.hidden) .shell {
   gap: 8px;
   width: min(620px, 100%);
   padding: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.82);
+  border: 1px solid var(--line);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.74);
+  background: rgba(255, 253, 254, 0.88);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.82),
     0 12px 28px rgba(214, 177, 192, 0.12);
@@ -253,7 +261,7 @@ body:has(#result.hidden) .shell {
   border: 0;
   border-radius: 999px;
   padding: 0 22px;
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 253, 254, 0.96);
   color: var(--text);
   font: inherit;
   font-size: 17px;
@@ -262,7 +270,7 @@ body:has(#result.hidden) .shell {
 }
 
 .hero-search input::placeholder {
-  color: rgba(128, 98, 109, 0.66);
+  color: rgba(116, 92, 102, 0.72);
 }
 
 .hero-search button {
@@ -303,7 +311,7 @@ body:has(#result.hidden) .shell {
 
 .hero-index {
   margin: 0 0 16px;
-  color: #d7a25b;
+  color: #c08d5c;
   font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.2em;
@@ -317,12 +325,13 @@ body:has(#result.hidden) .shell {
   line-height: 0.88;
   letter-spacing: 0;
   font-weight: 700;
+  color: var(--heading);
 }
 
 .hero-subtitle {
   margin: 24px 0 0;
   max-width: 460px;
-  color: var(--muted);
+  color: var(--body);
   font-size: 18px;
   line-height: 1.6;
 }
@@ -368,9 +377,9 @@ body:has(#result.hidden) .shell {
   max-width: none;
   min-height: 158px;
   padding: 18px 20px;
-  border: 1px solid rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--line);
   border-radius: 28px;
-  background: rgba(255, 255, 255, 0.54);
+  background: rgba(255, 253, 254, 0.74);
   backdrop-filter: blur(16px);
   box-shadow: 0 18px 42px rgba(196, 163, 176, 0.1);
 }
@@ -381,7 +390,7 @@ body:has(#result.hidden) .shell {
 
 .hero-history-title {
   margin: 0;
-  color: #d195ab;
+  color: var(--label);
   font-size: 12px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -399,9 +408,9 @@ body:has(#result.hidden) .shell {
   gap: 4px;
   min-height: 94px;
   padding: 16px 16px;
-  border: 1px solid rgba(255, 255, 255, 0.78);
+  border: 1px solid var(--line);
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.76);
+  background: rgba(255, 253, 254, 0.88);
   color: var(--text);
   text-align: left;
   cursor: pointer;
@@ -423,7 +432,7 @@ body:has(#result.hidden) .shell {
 }
 
 .history-chip-symbol {
-  color: #cf85a8;
+  color: var(--label);
   font-size: 13px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -439,7 +448,7 @@ body:has(#result.hidden) .shell {
 .status {
   min-height: 24px;
   margin: 14px 26px 0 88px;
-  color: var(--muted);
+  color: var(--body);
   font-size: 14px;
 }
 
@@ -515,7 +524,7 @@ body:has(#result.hidden) .shell {
 .sakura-card-label,
 .chart-metric-label {
   margin: 0;
-  color: #d195ab;
+  color: var(--label);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.18em;
@@ -527,6 +536,7 @@ body:has(#result.hidden) .shell {
   font-family: var(--display);
   font-size: 38px;
   line-height: 1;
+  color: var(--heading);
 }
 
 .action-row {
@@ -546,8 +556,8 @@ body:has(#result.hidden) .shell {
   padding: 0 16px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.74);
-  color: var(--text);
+  background: rgba(255, 253, 254, 0.88);
+  color: var(--heading);
   text-decoration: none;
   font: inherit;
   font-weight: 700;
@@ -565,12 +575,13 @@ body:has(#result.hidden) .shell {
 
 .token-overview {
   grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
-  align-items: stretch;
+  align-items: center;
   gap: 24px;
 }
 
 .token-hero-art {
   position: relative;
+  align-self: center;
 }
 
 .token-hero-glow {
@@ -593,7 +604,7 @@ body:has(#result.hidden) .shell {
   border-radius: 34px;
   background:
     radial-gradient(circle at 50% 24%, rgba(255, 255, 255, 0.68), transparent 35%),
-    rgba(255, 255, 255, 0.58);
+    rgba(255, 253, 254, 0.84);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.76),
     0 22px 42px rgba(193, 172, 181, 0.12);
@@ -668,7 +679,7 @@ body:has(#result.hidden) .shell {
 
 .token-card-value {
   margin: 0;
-  color: var(--text);
+  color: var(--heading);
   font-size: 24px;
   font-weight: 800;
   line-height: 1.1;
@@ -681,8 +692,8 @@ body:has(#result.hidden) .shell {
   justify-content: center;
   border-radius: 26px;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.72);
-  color: var(--text);
+  background: rgba(255, 253, 254, 0.9);
+  color: var(--heading);
   text-decoration: none;
   font-size: 18px;
   font-weight: 700;
@@ -702,14 +713,14 @@ body:has(#result.hidden) .shell {
 
 .token-social-btn.is-live {
   color: var(--good);
-  border-color: rgba(181, 241, 204, 0.86);
-  background: rgba(233, 255, 242, 0.78);
+  border-color: var(--good-line);
+  background: var(--good-bg);
 }
 
 .token-social-btn.is-missing {
   color: var(--bad);
-  border-color: rgba(255, 214, 225, 0.84);
-  background: rgba(255, 244, 247, 0.8);
+  border-color: #e7d8df;
+  background: var(--card-secondary);
 }
 
 .token-address-head {
@@ -728,8 +739,8 @@ body:has(#result.hidden) .shell {
   padding: 12px 14px;
   border-radius: 22px;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.72);
-  color: var(--text);
+  background: rgba(255, 253, 254, 0.92);
+  color: var(--body);
   font-family: var(--mono);
   font-size: 11px;
   line-height: 1.2;
@@ -760,6 +771,7 @@ body:has(#result.hidden) .shell {
   font-family: var(--display);
   font-size: 38px;
   line-height: 1;
+  color: var(--heading);
 }
 
 .sakura-verdict {
@@ -768,7 +780,7 @@ body:has(#result.hidden) .shell {
   display: grid;
   place-items: center;
   border-radius: 28px;
-  border: 1px solid rgba(181, 241, 204, 0.86);
+  border: 1px solid var(--good-line);
   background: var(--good-bg);
   color: var(--good);
   box-shadow:
@@ -779,7 +791,7 @@ body:has(#result.hidden) .shell {
 }
 
 .sakura-verdict.is-bearish {
-  border-color: rgba(255, 214, 225, 0.84);
+  border-color: #e7d8df;
   background: var(--bad-bg);
   color: var(--bad);
 }
@@ -788,7 +800,7 @@ body:has(#result.hidden) .shell {
 .sakura-card.premium {
   border-radius: 30px;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 253, 254, 0.9);
   box-shadow: 0 16px 34px rgba(193, 172, 181, 0.1);
 }
 
@@ -799,7 +811,7 @@ body:has(#result.hidden) .shell {
 
 .sakura-summary {
   margin: 0;
-  color: #4f3d44;
+  color: var(--body);
   font-size: 17px;
   line-height: 1.95;
 }
@@ -834,7 +846,7 @@ body:has(#result.hidden) .shell {
 .sakura-list {
   margin: 16px 0 0;
   padding-left: 20px;
-  color: #544249;
+  color: var(--body);
   line-height: 1.9;
   font-size: 15px;
 }
@@ -845,16 +857,16 @@ body:has(#result.hidden) .shell {
 
 .sakura-card.premium:first-child {
   background:
-    radial-gradient(circle at 16% 18%, rgba(181, 241, 204, 0.14), transparent 38%),
-    rgba(255, 255, 255, 0.74);
-  border-color: rgba(181, 241, 204, 0.56);
+    radial-gradient(circle at 16% 18%, rgba(223, 241, 231, 0.7), transparent 38%),
+    rgba(255, 253, 254, 0.9);
+  border-color: var(--good-line);
 }
 
 .sakura-card.premium:last-child {
   background:
-    radial-gradient(circle at 84% 18%, rgba(255, 214, 225, 0.16), transparent 34%),
-    rgba(255, 255, 255, 0.74);
-  border-color: rgba(255, 214, 225, 0.62);
+    radial-gradient(circle at 84% 18%, rgba(249, 241, 244, 0.92), transparent 34%),
+    rgba(255, 253, 254, 0.9);
+  border-color: #e7d8df;
 }
 
 @keyframes sakura-float {
