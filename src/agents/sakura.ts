@@ -349,7 +349,9 @@ SOURCE AWARE WRITING RULES:
 - If narrative evidence is weak, say narrative strength is still unclear.
 - If LP, burn, router, or locker addresses dominate the raw holder list, do not treat raw concentration as normal whale concentration.
 - Use filtered holder concentration for holder-quality commentary whenever it is provided.
-- If raw holder concentration looks bad but filtered concentration looks better because LP or burn dominates, say that clearly.`;
+- If raw holder concentration looks bad but filtered concentration looks better because LP or burn dominates, say that clearly.
+- If lpHolderDetected is true, use topHolderPercentFiltered for risk judgment, not topHolderPercentRaw.
+- Raw holder concentration can be mentioned only to explain why LP makes the raw picture look worse than the real holder picture.`;
 
 export async function analyzeWithSakura(rawInput: string): Promise<SakuraResult> {
   const lookup = await lookupCa(rawInput);
@@ -510,6 +512,11 @@ async function requestHuggingFaceAnalysis(
   };
 
   console.log("SAKURA INPUT:", JSON.stringify(modelInput, null, 2));
+  console.log("HOLDER ANALYSIS", {
+    rawTopHolderPercent: lookup.holders?.topHolderPercentRaw,
+    filteredTopHolderPercent: lookup.holders?.topHolderPercentFiltered,
+    lpDetected: lookup.holders?.lpHolderDetected,
+  });
 
   const response = await fetch("https://router.huggingface.co/v1/chat/completions", {
     method: "POST",
