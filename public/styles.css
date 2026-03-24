@@ -739,7 +739,6 @@ body:has(#result.hidden) .shell {
 }
 
 .ghost-btn,
-.chart-link,
 .address-copy-btn {
   display: inline-flex;
   align-items: center;
@@ -1131,8 +1130,7 @@ body:has(#result.hidden) .shell {
   min-width: 0;
 }
 
-.chart-ribbon,
-.chart-timeframes {
+.chart-ribbon {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
@@ -1145,8 +1143,7 @@ body:has(#result.hidden) .shell {
 }
 
 .chart-chip,
-.chart-metric,
-.timeframe-btn {
+.chart-metric {
   border: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.68);
 }
@@ -1208,38 +1205,25 @@ body:has(#result.hidden) .shell {
   gap: 12px;
 }
 
-.timeframe-btn {
-  min-height: 38px;
-  padding: 0 16px;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--body);
-  font: inherit;
-  font-weight: 700;
-  cursor: pointer;
-  transition:
-    background 200ms ease,
-    border-color 200ms ease,
-    color 200ms ease,
-    box-shadow 200ms ease,
-    transform 200ms ease;
+.chart-mascot {
+  width: 112px;
+  height: 112px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(249, 242, 245, 0.88));
+  box-shadow: 0 12px 28px rgba(233, 200, 211, 0.2);
 }
 
-.timeframe-btn:hover:not(:disabled) {
-  border-color: var(--line-strong);
-  background: rgba(255, 255, 255, 0.8);
-}
-
-.timeframe-btn.is-active {
-  background: linear-gradient(180deg, #ffd98d, var(--gold-strong));
-  color: #624a0a;
-  border-color: rgba(210, 167, 73, 0.9);
-  box-shadow: 0 10px 22px rgba(230, 191, 99, 0.22);
-}
-
-.timeframe-btn:disabled {
-  opacity: 0.45;
-  cursor: default;
+.chart-mascot-image {
+  width: 84px;
+  max-width: 84px;
+  height: auto;
+  display: block;
+  transform: translateY(2px);
+  filter: drop-shadow(0 10px 18px rgba(168, 95, 121, 0.18));
 }
 
 .chart-status {

@@ -33,7 +33,6 @@ const sakuraReasons = document.querySelector("#sakura-reasons");
 const sakuraCautions = document.querySelector("#sakura-cautions");
 const chartShell = document.querySelector("#chart-shell");
 const chartFrame = document.querySelector("#chart-frame");
-const chartLink = document.querySelector("#chart-link");
 const chartStatus = document.querySelector("#chart-status");
 const chartPrice = document.querySelector("#chart-price");
 const chartMarketCap = document.querySelector("#chart-marketcap");
@@ -41,11 +40,9 @@ const chartLiquidity = document.querySelector("#chart-liquidity");
 const chartTrendChip = document.querySelector("#chart-trend-chip");
 const chartTimeframeChip = document.querySelector("#chart-timeframe-chip");
 const chartCandleChip = document.querySelector("#chart-candle-chip");
-const timeframeButtons = Array.from(document.querySelectorAll(".timeframe-btn"));
 const marketGrid = document.querySelector("#market-grid");
 
 let lastResult = null;
-let currentTimeframe = "15m";
 let recentEntries = [];
 let recentFetched = false;
 let currentLookupAddress = "";
@@ -85,7 +82,6 @@ form.addEventListener("submit", async (event) => {
 
   status.textContent = "Looking up token data...";
   input.value = address;
-  currentTimeframe = "15m";
   result.classList.remove("hidden");
   heroResult.classList.add("hidden");
   logoShell.classList.add("hidden");
@@ -140,10 +136,6 @@ historyClear?.addEventListener("click", async () => {
   recentEntries = [];
   recentFetched = true;
   renderRecentSearches({ useCache: true });
-});
-
-timeframeButtons.forEach((button) => {
-  button.addEventListener("click", () => {});
 });
 
 async function renderResult(data) {
@@ -237,12 +229,10 @@ async function renderSakura(address) {
 
 async function renderChart(data) {
   chartShell.classList.remove("hidden");
-  chartLink.textContent = "Open Market";
   chartPrice.textContent = formatUsd(data.dexScreener?.priceUsd);
   chartMarketCap.textContent = formatCompactMoney(data.dexScreener?.marketCap);
   chartLiquidity.textContent = formatCompactMoney(data.dexScreener?.liquidityUsd);
   chartTimeframeChip.textContent = "TF: Live";
-  setTimeframeButtonsDisabled(true);
   chartStatus.classList.add("hidden");
   chartStatus.textContent = "";
   chartFrame.innerHTML = `
@@ -258,7 +248,6 @@ async function renderChart(data) {
   const pair = await resolveDexPairForChart(data);
   if (!pair?.pairAddress) {
     chartFrame.innerHTML = "";
-    chartLink.removeAttribute("href");
     setChartRibbonFromMarket(data, false);
     chartStatus.textContent = "No liquidity pair yet.";
     chartStatus.classList.remove("hidden");
@@ -266,7 +255,6 @@ async function renderChart(data) {
   }
 
   const embedUrl = `https://dexscreener.com/bsc/${pair.pairAddress}?embed=1&theme=light&trades=0&info=0`;
-  chartLink.href = pair.url || `https://dexscreener.com/bsc/${pair.pairAddress}`;
   setChartRibbonFromMarket(
     {
       ...data,
@@ -306,18 +294,12 @@ function destroyChart() {
   chartFrame.innerHTML = "";
 }
 
-function setTimeframeButtonsDisabled(disabled) {
-  timeframeButtons.forEach((button) => {
-    button.disabled = disabled;
-  });
-}
-
 function resetChartMetrics() {
   chartPrice.textContent = "-";
   chartMarketCap.textContent = "-";
   chartLiquidity.textContent = "-";
   chartTrendChip.textContent = "Trend: -";
-  chartTimeframeChip.textContent = `TF: ${currentTimeframe}`;
+  chartTimeframeChip.textContent = "TF: Live";
   chartCandleChip.textContent = "Candles: -";
 }
 
@@ -558,7 +540,6 @@ function initializeHomepage() {
   homepageInitialized = true;
   console.log("init homepage");
   renderSkeleton();
-  setTimeframeButtonsDisabled(true);
   renderRecentSearches();
 
   const initialAddress = extractAddress(new URL(window.location.href).searchParams.get("ca") || "");
