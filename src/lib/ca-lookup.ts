@@ -3,6 +3,7 @@ import { bsc } from "viem/chains";
 
 const FOUR_MEME_API_BASE = "https://four.meme/meme-api/v1";
 const HELPER3_ADDRESS = "0xF251F83e40a78868FcfA3FA4599Dad6494E46034";
+const BSCSCAN_API_BASE = "https://api.bscscan.com/api";
 
 const helper3Abi = parseAbi([
   "function getTokenInfo(address token) view returns (uint256 version, address tokenManager, address quote, uint256 lastPrice, uint256 tradingFeeRate, uint256 minTradingFee, uint256 launchTime, uint256 offers, uint256 maxOffers, uint256 funds, uint256 maxFunds, bool liquidityAdded)",
@@ -74,6 +75,16 @@ type ClassifiedHolder = {
   isLocked: boolean;
 };
 
+type BscScanTx = {
+  from?: string;
+  to?: string;
+  timeStamp?: string;
+  contractAddress?: string;
+  isError?: string;
+};
+
+type CreatorQuality = "experienced" | "risky" | "new" | "unknown";
+
 const BURN_ADDRESSES = new Set([
   "0x0000000000000000000000000000000000000000",
   "0x000000000000000000000000000000000000dead",
@@ -126,7 +137,11 @@ export async function lookupCa(rawInput: string, rpcUrl?: string) {
   ] = chain;
 
   const bestDexPair = pickBestDexPair(dexScreenerPairs);
-  const holderSignals = await fetchHolderSignals(tokenAddress);
+  const creatorAddress = firstString(rest.data, ["creator", "founder", "userAddress"]);
+  const [holderSignals, creatorHistory] = await Promise.all([
+    fetchHolderSignals(tokenAddress),
+    fetchCreatorHistory(creatorAddress, tokenAddress),
+  ]);
   const launchTimestampMs = Number(launchTime) > 0 ? Number(launchTime) * 1000 : null;
   const pairAgeMinutes = getPairAgeMinutes(bestDexPair?.pairCreatedAt);
   const contractAgeMinutes = launchTimestampMs ? Math.max(0, Math.round((Date.now() - launchTimestampMs) / 60000)) : null;
@@ -137,7 +152,7 @@ export async function lookupCa(rawInput: string, rpcUrl?: string) {
     summary: {
       name: firstString(rest.data, ["tokenName", "name"]),
       symbol: firstString(rest.data, ["shortName", "symbol"]),
-      creator: firstString(rest.data, ["creator", "founder", "userAddress"]),
+      creator: creatorAddress,
       logoUrl: firstString(rest.data, ["imgUrl", "logoUrl", "image"]),
       description: firstString(rest.data, ["desc", "descr", "description"]),
       website: firstString(rest.data, ["webUrl"]) || getDexWebsite(bestDexPair),
@@ -175,6 +190,7 @@ export async function lookupCa(rawInput: string, rpcUrl?: string) {
         }
       : null,
     holders: holderSignals,
+    creatorHistory,
     rest,
     chain: {
       version: version.toString(),
@@ -389,6 +405,83 @@ function getDexSocial(pair: DexPair | null, type: string) {
   return null;
 }
 
+async function fetchCreatorHistory(creatorAddress: string | null, currentTokenAddress: `0x${string}`) {
+  if (!creatorAddress) {
+    return emptyCreatorHistory();
+  }
+
+  try {
+    const txs = await fetchCreatorTransactions(creatorAddress);
+    const deployedContracts = txs
+      .filter((tx) => String(tx.from || "").toLowerCase() === creatorAddress.toLowerCase())
+      .map((tx) => ({
+        contractAddress: String(tx.contractAddress || "").toLowerCase(),
+        timeStamp: Number(tx.timeStamp || 0),
+      }))
+      .filter((tx) => /^0x[a-f0-9]{40}$/.test(tx.contractAddress))
+      .filter((tx) => tx.contractAddress !== currentTokenAddress.toLowerCase());
+
+    const uniqueDeploys = Array.from(new Map(deployedContracts.map((deploy) => [deploy.contractAddress, deploy])).values())
+      .sort((left, right) => right.timeStamp - left.timeStamp)
+      .slice(0, 8);
+
+    const tokenProfiles = await Promise.all(
+      uniqueDeploys.map(async (deploy) => {
+        const pairs = await fetchDexScreenerPairs(deploy.contractAddress as `0x${string}`);
+        const bestPair = pickBestDexPair(pairs);
+        const liquidityUsd = Number(bestPair?.liquidity?.usd || 0);
+        const marketCap = Number(bestPair?.marketCap || 0);
+        const volume24h = Number(bestPair?.volume?.h24 || 0);
+        const successful = liquidityUsd >= 10000 || marketCap >= 50000 || volume24h >= 10000;
+        const dead = !bestPair?.pairAddress || (liquidityUsd < 1000 && marketCap < 5000 && volume24h < 1000);
+
+        return {
+          address: deploy.contractAddress,
+          liquidityUsd,
+          marketCap,
+          volume24h,
+          successful,
+          dead,
+          timeStamp: deploy.timeStamp,
+        };
+      }),
+    );
+
+    const creatorTokenCount = uniqueDeploys.length;
+    const creatorSuccessfulTokens = tokenProfiles.filter((profile) => profile.successful).length;
+    const creatorDeadTokens = tokenProfiles.filter((profile) => profile.dead).length;
+    const creatorAvgLiquidityUSD =
+      tokenProfiles.filter((profile) => profile.liquidityUsd > 0).reduce((sum, profile) => sum + profile.liquidityUsd, 0) /
+        Math.max(1, tokenProfiles.filter((profile) => profile.liquidityUsd > 0).length) || null;
+    const creatorLastDeployHoursAgo =
+      uniqueDeploys.length > 0 ? Math.max(0, Math.round((Date.now() - uniqueDeploys[0].timeStamp * 1000) / 3600000)) : null;
+
+    const creatorQuality: CreatorQuality =
+      creatorTokenCount === 0
+        ? "new"
+        : creatorSuccessfulTokens >= 2
+          ? "experienced"
+          : creatorDeadTokens > creatorSuccessfulTokens
+            ? "risky"
+            : "unknown";
+
+    const result = {
+      creatorQuality,
+      creatorTokenCount,
+      creatorSuccessfulTokens,
+      creatorDeadTokens,
+      creatorAvgLiquidityUSD: creatorAvgLiquidityUSD ? Math.round(creatorAvgLiquidityUSD) : null,
+      creatorLastDeployHoursAgo,
+      previousTokenAddresses: uniqueDeploys.map((deploy) => deploy.contractAddress),
+    };
+
+    console.log("CREATOR HISTORY", result);
+    return result;
+  } catch {
+    return emptyCreatorHistory();
+  }
+}
+
 async function fetchHolderSignals(tokenAddress: `0x${string}`) {
   try {
     const response = await fetch(
@@ -468,6 +561,34 @@ function emptyHolderSignals() {
     lpHolderDetected: false,
     burnHolderDetected: false,
   };
+}
+
+function emptyCreatorHistory() {
+  return {
+    creatorQuality: "unknown" as CreatorQuality,
+    creatorTokenCount: 0,
+    creatorSuccessfulTokens: 0,
+    creatorDeadTokens: 0,
+    creatorAvgLiquidityUSD: null as number | null,
+    creatorLastDeployHoursAgo: null as number | null,
+    previousTokenAddresses: [] as string[],
+  };
+}
+
+async function fetchCreatorTransactions(creatorAddress: string) {
+  const apiKey = process.env.BSCSCAN_API_KEY?.trim() || "";
+  const url = `${BSCSCAN_API_BASE}?module=account&action=txlist&address=${encodeURIComponent(creatorAddress)}&sort=desc${apiKey ? `&apikey=${encodeURIComponent(apiKey)}` : ""}`;
+  const response = await fetch(url, { headers: { Accept: "application/json" } });
+  if (!response.ok) {
+    return [] as BscScanTx[];
+  }
+
+  const json = (await response.json()) as {
+    status?: string;
+    result?: BscScanTx[] | string;
+  } | null;
+
+  return Array.isArray(json?.result) ? json.result : ([] as BscScanTx[]);
 }
 
 function toNullableNumber(value: unknown) {

@@ -50,7 +50,7 @@ type SakuraEvidenceContext = {
   hasBuys24h: boolean;
   hasSells24h: boolean;
   hasPairAge: boolean;
-  hasCreatorHistory: false;
+  hasCreatorHistory: boolean;
   hasHolderData: boolean;
   hasWalletDistribution: boolean;
   hasSocialMetrics: boolean;
@@ -407,6 +407,12 @@ async function requestHuggingFaceAnalysis(
     name: lookup.summary.name,
     symbol: lookup.summary.symbol,
     creator: lookup.summary.creator,
+    creatorQuality: lookup.creatorHistory?.creatorQuality,
+    creatorTokenCount: lookup.creatorHistory?.creatorTokenCount,
+    creatorSuccessfulTokens: lookup.creatorHistory?.creatorSuccessfulTokens,
+    creatorDeadTokens: lookup.creatorHistory?.creatorDeadTokens,
+    creatorAvgLiquidityUSD: lookup.creatorHistory?.creatorAvgLiquidityUSD,
+    creatorLastDeployHoursAgo: lookup.creatorHistory?.creatorLastDeployHoursAgo,
     website: lookup.summary.website,
     twitter: lookup.summary.twitter,
     telegram: lookup.summary.telegram,
@@ -458,6 +464,7 @@ async function requestHuggingFaceAnalysis(
       tokenName: evidence.hasName,
       ticker: evidence.hasSymbol,
       creatorAddress: evidence.hasCreatorAddress,
+      creatorHistory: evidence.hasCreatorHistory,
       websiteLink: evidence.hasWebsite,
       twitterLink: evidence.hasTwitter,
       telegramLink: evidence.hasTelegram,
@@ -486,9 +493,15 @@ async function requestHuggingFaceAnalysis(
       top3PercentFiltered: lookup.holders?.top3PercentFiltered,
       lpHolderDetected: lookup.holders?.lpHolderDetected,
       burnHolderDetected: lookup.holders?.burnHolderDetected,
+      creatorQuality: lookup.creatorHistory?.creatorQuality,
+      creatorTokenCount: lookup.creatorHistory?.creatorTokenCount,
+      creatorSuccessfulTokens: lookup.creatorHistory?.creatorSuccessfulTokens,
+      creatorDeadTokens: lookup.creatorHistory?.creatorDeadTokens,
+      creatorAvgLiquidityUSD: lookup.creatorHistory?.creatorAvgLiquidityUSD,
+      creatorLastDeployHoursAgo: lookup.creatorHistory?.creatorLastDeployHoursAgo,
     },
     missingSignals: [
-      "creator history",
+      ...(evidence.hasCreatorHistory ? [] : ["creator history"]),
       ...(evidence.hasHolderData ? [] : ["holder distribution", "wallet quality"]),
       ...(evidence.hasSocialMetrics ? [] : ["verified social metrics"]),
       ...(evidence.hasAttentionMetrics ? [] : ["attention flow metrics"]),
@@ -1334,7 +1347,7 @@ function buildEvidenceContext(lookup: Awaited<ReturnType<typeof lookupCa>>): Sak
     hasBuys24h: Number(lookup.dexScreener?.buys24h || 0) > 0,
     hasSells24h: Number(lookup.dexScreener?.sells24h || 0) > 0,
     hasPairAge: Number(lookup.dexScreener?.pairAgeMinutes || 0) > 0,
-    hasCreatorHistory: false,
+    hasCreatorHistory: lookup.creatorHistory?.creatorQuality !== "unknown",
     hasHolderData: Number(lookup.holders?.totalHolders || 0) > 0,
     hasWalletDistribution: Number(lookup.holders?.topHolderPercentFiltered || 0) > 0,
     hasSocialMetrics: false,
@@ -1351,7 +1364,7 @@ function enforceEvidenceBoundary(value: string, evidence?: SakuraEvidenceContext
   if (!sentence) return "";
   if (!evidence) return sentence;
 
-  if (/\b(binance backing|backed by binance|clean track record|creator has|creator history|reputable creator)\b/i.test(sentence)) {
+  if (!evidence.hasCreatorHistory && /\b(binance backing|backed by binance|clean track record|creator has|creator history|reputable creator|experienced creator|mixed creator history|new deployer)\b/i.test(sentence)) {
     return "Creator quality is unverified.";
   }
 
