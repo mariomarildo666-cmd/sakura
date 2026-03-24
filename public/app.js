@@ -46,6 +46,12 @@ const marketGrid = document.querySelector("#market-grid");
 
 let lastResult = null;
 let currentTimeframe = "15m";
+let recentEntries = [];
+let recentFetched = false;
+let currentLookupAddress = "";
+let currentSakuraAddress = "";
+let lookupRequestToken = 0;
+let sakuraRequestToken = 0;
 
 const tokenLogoFallback = document.createElement("div");
 tokenLogoFallback.className = "token-logo-fallback hidden";
@@ -73,6 +79,11 @@ form.addEventListener("submit", async (event) => {
     return;
   }
 
+  if (lastResult?.tokenAddress === address) {
+    status.textContent = "Lookup complete.";
+    return;
+  }
+
   status.textContent = "Looking up token data...";
   input.value = address;
   currentTimeframe = "15m";
@@ -85,6 +96,7 @@ form.addEventListener("submit", async (event) => {
   chartStatus.textContent = "";
   rawOutput.innerHTML = "";
   marketGrid.innerHTML = "";
+  sakuraShell.dataset.loadedFor = "";
   resetSummaryCards();
   resetSocialButtons();
   resetChartMetrics();
@@ -92,6 +104,9 @@ form.addEventListener("submit", async (event) => {
   skeletonGrid.classList.remove("hidden");
 
   try {
+    const lookupToken = ++lookupRequestToken;
+    currentLookupAddress = address;
+    console.log("fetchCA called");
     const response = await fetch(`/api/ca?address=${encodeURIComponent(address)}`);
     const data = await response.json();
 
@@ -99,9 +114,14 @@ form.addEventListener("submit", async (event) => {
       throw new Error(data.error || "Lookup failed.");
     }
 
+    if (lookupToken !== lookupRequestToken || currentLookupAddress !== address) {
+      return;
+    }
+
     await renderResult(data);
     syncShareUrl(address);
-    renderRecentSearches();
+    upsertRecentSearch(data);
+    renderRecentSearches({ useCache: true });
     status.textContent = "Lookup complete.";
   } catch (error) {
     status.textContent = error instanceof Error ? error.message : "Lookup failed.";
@@ -118,7 +138,9 @@ historyClear?.addEventListener("click", async () => {
   try {
     await fetch("/api/recent", { method: "DELETE" });
   } catch {}
-  renderRecentSearches();
+  recentEntries = [];
+  recentFetched = true;
+  renderRecentSearches({ useCache: true });
 });
 
 timeframeButtons.forEach((button) => {
@@ -166,6 +188,10 @@ async function renderResult(data) {
 }
 
 async function renderSakura(address) {
+  if (currentSakuraAddress === address && sakuraShell.dataset.loadedFor === address) {
+    return;
+  }
+
   sakuraShell.classList.remove("hidden");
   sakuraVerdict.className = "sakura-verdict";
   sakuraVerdict.textContent = "...";
@@ -175,11 +201,18 @@ async function renderSakura(address) {
   fillSakuraList(sakuraCautions, [], "No fade angle yet.");
 
   try {
+    const requestToken = ++sakuraRequestToken;
+    currentSakuraAddress = address;
+    console.log("fetchSakura called");
     const response = await fetch(`/api/sakura-agent?address=${encodeURIComponent(address)}&mode=read`);
     const agent = await response.json();
 
     if (!response.ok) {
       throw new Error(agent.error || "Sakura agent failed.");
+    }
+
+    if (requestToken !== sakuraRequestToken || currentSakuraAddress !== address) {
+      return;
     }
 
     const analysis = agent.payload?.analysis;
@@ -193,6 +226,7 @@ async function renderSakura(address) {
     renderSakuraSummary([analysis.verdictLine, ...analysis.traderRead, analysis.finalLine]);
     fillSakuraList(sakuraReasons, analysis.bullCase, "Sakura is not seeing a clean ape case.");
     fillSakuraList(sakuraCautions, analysis.bearCase, "Sakura is not seeing a giant red flag.");
+    sakuraShell.dataset.loadedFor = address;
   } catch (error) {
     sakuraVerdict.textContent = "--";
     setSakuraFigure("neutral");
@@ -454,6 +488,7 @@ function resetHomeView() {
   logoShell.classList.add("hidden");
   chartShell.classList.add("hidden");
   sakuraShell.classList.add("hidden");
+  sakuraShell.dataset.loadedFor = "";
   chartStatus.classList.add("hidden");
   chartStatus.textContent = "";
   rawOutput.innerHTML = "";
@@ -464,21 +499,24 @@ function resetHomeView() {
   destroyChart();
 }
 
-async function renderRecentSearches() {
-  let entries = [];
-  try {
-    const response = await fetch("/api/recent");
-    const data = await response.json();
-    if (response.ok && Array.isArray(data.items)) {
-      entries = data.items;
+async function renderRecentSearches(options = {}) {
+  const { useCache = false, force = false } = options;
+
+  if ((!recentFetched || force) && !useCache) {
+    try {
+      console.log("fetchRecent called");
+      const response = await fetch("/api/recent");
+      const data = await response.json();
+      recentEntries = response.ok && Array.isArray(data.items) ? data.items : [];
+    } catch {
+      recentEntries = [];
     }
-  } catch {
-    entries = [];
+    recentFetched = true;
   }
 
   historyList.innerHTML = "";
 
-  if (!entries.length) {
+  if (!recentEntries.length) {
     historyShell.classList.add("hidden");
     historyClear?.classList.add("hidden");
     return;
@@ -487,7 +525,7 @@ async function renderRecentSearches() {
   historyShell.classList.remove("hidden");
   historyClear?.classList.remove("hidden");
 
-  for (const entry of entries) {
+  for (const entry of recentEntries) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "history-chip";
@@ -506,6 +544,20 @@ async function renderRecentSearches() {
     });
     historyList.appendChild(button);
   }
+}
+
+function upsertRecentSearch(data) {
+  const next = {
+    tokenAddress: data.tokenAddress,
+    name: data.summary?.name || null,
+    symbol: data.summary?.symbol || null,
+    logoUrl: data.summary?.logoUrl || null,
+    searchedAt: new Date().toISOString(),
+  };
+
+  const normalized = String(next.tokenAddress || "").toLowerCase();
+  recentEntries = [next, ...recentEntries.filter((item) => String(item.tokenAddress || "").toLowerCase() !== normalized)].slice(0, 8);
+  recentFetched = true;
 }
 
 function extractAddress(value) {
