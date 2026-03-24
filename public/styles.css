@@ -396,7 +396,7 @@ body:has(#result.hidden) .shell {
 }
 
 .hero-copy {
-  max-width: 480px;
+  max-width: 440px;
   padding-top: 8px;
   min-width: 0;
 }
@@ -413,10 +413,10 @@ body:has(#result.hidden) .shell {
 .hero-title {
   margin: 0;
   font-family: var(--display);
-  max-width: 480px;
+  max-width: 440px;
   font-size: clamp(44px, 4.5vw, 64px);
-  line-height: 0.98;
-  letter-spacing: -0.025em;
+  line-height: 0.94;
+  letter-spacing: -0.03em;
   font-weight: 700;
   color: var(--heading);
   word-break: keep-all;
@@ -426,7 +426,7 @@ body:has(#result.hidden) .shell {
 
 .hero-subtitle {
   margin: 20px 0 0;
-  max-width: 480px;
+  max-width: 440px;
   color: var(--body);
   font-size: 15px;
   line-height: 1.65;
