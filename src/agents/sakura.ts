@@ -170,6 +170,29 @@ PRESENTATION RULES
   - "watchlist material, not chase material"
   - "late buyers can get farmed here"
 
+VARIATION RULES
+
+- Do not reuse the same opening lines across outputs.
+- Do not repeat the same risk phrases unless absolutely necessary.
+- Rephrase similar ideas naturally.
+- Let different tokens produce different voice texture.
+- Avoid sounding like a fixed phrase engine.
+- Do not mirror reference wording if reference context is provided.
+- If two ideas are similar, keep the sharper one and phrase the second one differently.
+
+STYLE RULES
+
+- Write like a trader making live notes.
+- Use fresh wording.
+- Keep it concise, but not robotic.
+- Avoid canned phrasing unless the setup truly demands it.
+- Avoid stock lines like:
+  - "social backing is thin"
+  - "liquidity still looks weak"
+  - "exit risk is elevated"
+  - "enough attention to matter"
+  unless those exact words feel necessary.
+
 OUTPUT STRUCTURE (MANDATORY)
 
 Return valid JSON only with this exact shape:
@@ -324,19 +347,24 @@ async function requestHuggingFaceAnalysis(
             liquidityUsd: lookup.dexScreener?.liquidityUsd,
             marketCap: lookup.dexScreener?.marketCap,
             fdv: lookup.dexScreener?.fdv,
-            heuristicContext: {
+            heuristicReference: {
               verdict: heuristic.verdict,
-              verdictLine: heuristic.verdictLine,
-              traderRead: heuristic.traderRead,
-              bullCase: heuristic.bullCase,
-              bearCase: heuristic.bearCase,
               scores: heuristic.scores,
-              finalLine: heuristic.finalLine,
+              overallScore: heuristic.overallScore,
+              classification:
+                heuristic.overallScore >= 7
+                  ? "tradable"
+                  : heuristic.scores.exitLiquidityRisk >= 7
+                    ? "exit-liquidity risk"
+                    : heuristic.scores.tradeability <= 4
+                      ? "watchlist"
+                      : "mixed",
             },
           }),
         },
       ],
-      temperature: 0.35,
+      temperature: 0.68,
+      top_p: 0.9,
       response_format: { type: "json_object" },
     }),
   });
@@ -444,9 +472,9 @@ function sanitizeParsedPayload(value: {
   const verdict = normalizeVerdict(value.verdict);
   const scores = normalizeScores(value.scores);
   const verdictLine = cleanSentence(value.verdictLine) || deriveVerdictLine(verdict, scores);
-  const traderRead = toCleanList(value.traderRead, 2, ["Enough attention to matter, but not enough structure to trust yet."]);
-  const bullCase = toCleanList(value.bullCase, 3, ["Enough attention here to keep it on the watchlist."]);
-  const bearCase = toCleanList(value.bearCase, 3, ["Late buyers can get farmed fast if this loses attention."]);
+  const traderRead = toCleanList(value.traderRead, 2, ["There is interest here, but the structure still needs proof."]);
+  const bullCase = toCleanList(value.bullCase, 2, ["There is enough here to keep it on the watchlist."]);
+  const bearCase = toCleanList(value.bearCase, 2, ["Late buyers are the first thing at risk if this slips."]);
   const finalLine = cleanSentence(value.finalLine) || deriveFinalLine(verdict, scores);
 
   return postProcessPayload({ verdict, verdictLine, traderRead, bullCase, bearCase, scores, finalLine });
@@ -463,24 +491,30 @@ function sanitizeLegacyPayload(value: {
   const scores = normalizeLegacyScores(value.scorecard);
   const verdictLine = deriveVerdictLine(verdict, scores, cleanSentence(value.summary));
   const traderRead = splitLegacySummary(cleanSentence(value.summary));
-  const bullCase = toCleanList(value.reasons, 3, ["Enough attention here to keep it on radar."]);
-  const bearCase = toCleanList(value.cautions, 3, ["The structure still looks fragile if buyers crowd in."]);
+  const bullCase = toCleanList(value.reasons, 2, ["There is enough attention here to stay on radar."]);
+  const bearCase = toCleanList(value.cautions, 2, ["The structure still looks fragile if buyers pile in."]);
   const finalLine = deriveFinalLine(verdict, scores);
 
   return postProcessPayload({ verdict, verdictLine, traderRead, bullCase, bearCase, scores, finalLine });
 }
 
 function buildHeuristicResult(lookup: Awaited<ReturnType<typeof lookupCa>>): SakuraResult {
+  const seed = buildVariationSeed(lookup.tokenAddress);
   const scores = scoreLookup(lookup);
   const verdict: SakuraVerdict = scores.tradeability >= 6 && scores.exitLiquidityRisk <= 6 ? "bullish" : "bearish";
-  const verdictLine = deriveVerdictLine(verdict, scores, deriveSummary(lookup, verdict, scores));
-  const traderRead = buildTraderRead(lookup, verdict, scores);
-  const bullCase = buildBullCase(lookup, scores);
-  const bearCase = buildBearCase(lookup, scores);
-  const finalLine = deriveFinalLine(verdict, scores);
+  const verdictLine = deriveVerdictLine(verdict, scores, deriveSummary(lookup, verdict, scores, seed), seed);
+  const traderRead = buildTraderRead(lookup, verdict, scores, seed);
+  const bullCase = buildBullCase(lookup, scores, seed);
+  const bearCase = buildBearCase(lookup, scores, seed);
+  const finalLine = deriveFinalLine(verdict, scores, seed);
 
   return buildRuntimeResult(
-    postProcessPayload({ verdict, verdictLine, traderRead, bullCase, bearCase, scores, finalLine }, lookup.summary.name, lookup.summary.symbol),
+    postProcessPayload(
+      { verdict, verdictLine, traderRead, bullCase, bearCase, scores, finalLine },
+      lookup.summary.name,
+      lookup.summary.symbol,
+      lookup.tokenAddress,
+    ),
     "heuristic",
     null,
     null,
@@ -577,62 +611,214 @@ function buildTraderRead(
   lookup: Awaited<ReturnType<typeof lookupCa>>,
   verdict: SakuraVerdict,
   scores: SakuraScores,
+  seed: number,
 ): string[] {
   const socialCount = [lookup.summary.website, lookup.summary.twitter, lookup.summary.telegram].filter(Boolean).length;
   const liquidity = Number(lookup.dexScreener?.liquidityUsd || 0);
   const marketCap = Number(lookup.dexScreener?.marketCap || 0);
 
-  const first =
-    verdict === "bullish"
-      ? `Enough attention to matter, and the setup has enough structure to trade if buyers keep showing up.`
-      : `Not enough structure to trust. If this moves, it is probably attention doing the work, not quality.`;
+  const bullishOpeners = [
+    "There is enough going on here to keep traders interested, and the tape is not completely fake.",
+    "This is not clean, but there is enough structure for it to matter if bids keep showing up.",
+    "You can make a case for trading this, but only while attention and structure stay aligned.",
+  ];
+  const bearishOpeners = [
+    "This does not look solid enough to trust yet. If it moves, hype is probably doing the lifting.",
+    "The read still looks flimsy. Buyers might show up, but the structure is not carrying much weight.",
+    "There is interest here, but not enough underneath it to treat this like a clean setup.",
+  ];
 
+  const socialReads = [
+    "The social shell is active enough to keep this in rotation if the story keeps landing.",
+    "There is enough social proof to keep eyes on it, which matters if the tape stays responsive.",
+    "The audience side is doing enough work that this can stay in play a little longer.",
+  ];
+  const stretchedReads = [
+    "The ratio already looks stretched, which is where late buyers usually get punished.",
+    "This is the kind of shape where late entries pay for everyone else if momentum slips.",
+    "The move already feels extended enough that chasing here can turn into donation flow.",
+  ];
+  const thinReads = [
+    "The social side still feels thin, so this stays in watchlist territory until it proves more.",
+    "There is not enough support around it yet, which makes this a stalk-not-chase setup.",
+    "It still needs a better support layer before this deserves real trust.",
+  ];
+
+  const first = verdict === "bullish" ? pickVariant(bullishOpeners, seed) : pickVariant(bearishOpeners, seed);
   const second =
     socialCount >= 2
-      ? `Socials are good enough to support a rotation. If attention sticks, this can stay tradable instead of fading on the first stall.`
+      ? pickVariant(socialReads, seed + 1)
       : liquidity > 0 && marketCap > 0 && marketCap / Math.max(liquidity, 1) > 18
-        ? `The ratio is stretched enough that late buyers can get farmed here. Watchlist material, not chase material.`
-        : `Social backing is thin. That keeps this in watchlist territory unless structure improves fast.`;
+        ? pickVariant(stretchedReads, seed + 2)
+        : pickVariant(thinReads, seed + 3);
 
   return [first, second].map(cleanSentence).filter(Boolean);
 }
 
-function buildBullCase(lookup: Awaited<ReturnType<typeof lookupCa>>, scores: SakuraScores): string[] {
+function buildBullCase(lookup: Awaited<ReturnType<typeof lookupCa>>, scores: SakuraScores, seed: number): string[] {
   const points: string[] = [];
-  if (scores.memeStrength >= 6) points.push("Meme packaging is good enough to catch attention fast.");
-  if ([lookup.summary.website, lookup.summary.twitter, lookup.summary.telegram].filter(Boolean).length >= 2) {
-    points.push("The social shell is good enough to support a rotation if buyers show up.");
+  if (scores.memeStrength >= 6) {
+    points.push(
+      pickVariant(
+        [
+          "The meme packaging is strong enough to pull attention quickly.",
+          "The concept is sticky enough to get picked up without much explanation.",
+          "The meme side has enough snap to keep this circulating.",
+        ],
+        seed,
+      ),
+    );
   }
-  if (scores.tradeability >= 6) points.push("There is enough structure here to treat it as tradable, not just noise.");
-  if (scores.rotationPotential >= 6) points.push("This has room to be stalked as a rotation candidate instead of ignored.");
-  if (scores.launchQuality >= 6) points.push("Launch quality is respectable for a BSC meme setup.");
-  return points.slice(0, 5);
+  if ([lookup.summary.website, lookup.summary.twitter, lookup.summary.telegram].filter(Boolean).length >= 2) {
+    points.push(
+      pickVariant(
+        [
+          "The social layer is built enough to support a rotation if buyers lean in.",
+          "The social setup gives this a chance to hold attention past the first impulse.",
+          "The community shell is decent enough that this does not die on first contact.",
+        ],
+        seed + 1,
+      ),
+    );
+  }
+  if (scores.tradeability >= 6) {
+    points.push(
+      pickVariant(
+        [
+          "There is enough underneath it to trade instead of just spectate.",
+          "The setup has enough shape that this can be worked, not just watched.",
+          "This is structured enough to be tradable if the tape stays alive.",
+        ],
+        seed + 2,
+      ),
+    );
+  }
+  if (scores.rotationPotential >= 6) {
+    points.push(
+      pickVariant(
+        [
+          "This can still catch a rotation if the sector bid keeps moving.",
+          "There is enough here for a rotation attempt before it gets stale.",
+          "This still has room to catch another wave if attention rolls back in.",
+        ],
+        seed + 3,
+      ),
+    );
+  }
+  if (scores.launchQuality >= 6) {
+    points.push(
+      pickVariant(
+        [
+          "The launch setup is decent enough that it is not immediately disqualified.",
+          "Launch quality is not perfect, but it clears the minimum bar for a real look.",
+          "The opening structure is decent but not clean, which is still workable on BSC.",
+        ],
+        seed + 4,
+      ),
+    );
+  }
+  return points.slice(0, 4);
 }
 
-function buildBearCase(lookup: Awaited<ReturnType<typeof lookupCa>>, scores: SakuraScores): string[] {
+function buildBearCase(lookup: Awaited<ReturnType<typeof lookupCa>>, scores: SakuraScores, seed: number): string[] {
   const points: string[] = [];
-  if (scores.exitLiquidityRisk >= 7) points.push("Exit risk is elevated. Late buyers can get clipped fast here.");
-  if (!lookup.summary.liquidityAdded) points.push("Liquidity still looks too weak to trust under pressure.");
-  if ([lookup.summary.website, lookup.summary.twitter, lookup.summary.telegram].filter(Boolean).length <= 1) {
-    points.push("Social backing is thin, which makes attention fragile.");
+  if (scores.exitLiquidityRisk >= 7) {
+    points.push(
+      pickVariant(
+        [
+          "Late buyers are the first thing at risk if this stalls.",
+          "This can turn into exit liquidity fast if the push loses steam.",
+          "If this rolls over, the last buyers are probably the product.",
+        ],
+        seed,
+      ),
+    );
   }
-  if (scores.tradeability <= 4) points.push("Tradability is weak. This looks more like a watch than a chase.");
-  if (scores.launchQuality <= 4) points.push("Launch quality is not strong enough to earn blind trust.");
-  return points.slice(0, 5);
+  if (!lookup.summary.liquidityAdded) {
+    points.push(
+      pickVariant(
+        [
+          "The liquidity picture still looks too soft for real trust.",
+          "Under pressure, the liquidity side still looks shaky.",
+          "There is not enough liquidity comfort here if momentum slips.",
+        ],
+        seed + 1,
+      ),
+    );
+  }
+  if ([lookup.summary.website, lookup.summary.twitter, lookup.summary.telegram].filter(Boolean).length <= 1) {
+    points.push(
+      pickVariant(
+        [
+          "The social layer is thin, which makes attention fragile.",
+          "There is not much support around the story yet, so attention can disappear fast.",
+          "The social side still looks light, and that usually makes the move brittle.",
+        ],
+        seed + 2,
+      ),
+    );
+  }
+  if (scores.tradeability <= 4) {
+    points.push(
+      pickVariant(
+        [
+          "This is watchlist material, not chase material.",
+          "The tape does not look good enough to reward bad entries.",
+          "There is not enough here yet to justify chasing it.",
+        ],
+        seed + 3,
+      ),
+    );
+  }
+  if (scores.launchQuality <= 4) {
+    points.push(
+      pickVariant(
+        [
+          "Launch quality is still below the level that deserves blind trust.",
+          "The opening setup still looks rough enough to keep size small.",
+          "The launch structure is loose, which keeps this in cautious territory.",
+        ],
+        seed + 4,
+      ),
+    );
+  }
+  return points.slice(0, 4);
 }
 
 function deriveSummary(
   lookup: Awaited<ReturnType<typeof lookupCa>>,
   verdict: SakuraVerdict,
   scores: SakuraScores,
+  seed: number,
 ): string {
   if (verdict === "bullish") {
-    return `Enough attention and structure to stay tradable, but it still needs discipline.`;
+    return pickVariant(
+      [
+        "There is enough attention and shape here to stay tradable, but it still needs discipline.",
+        "This has enough going for it to trade, but not enough to trust blindly.",
+        "The setup is workable, but it still needs respect and good entries.",
+      ],
+      seed,
+    );
   }
   if (scores.exitLiquidityRisk >= 7) {
-    return `This looks more like exit liquidity risk than a clean rotation.`;
+    return pickVariant(
+      [
+        "This reads closer to exit liquidity than a clean rotation.",
+        "The setup leans more toward feeding exits than building a clean move.",
+        "This looks more dangerous than tradable right now.",
+      ],
+      seed + 1,
+    );
   }
-  return `Some meme appeal is there, but the setup is still too loose to trust.`;
+  return pickVariant(
+    [
+      "There is some meme appeal here, but the setup is still too loose to trust.",
+      "The story can catch attention, but the structure still feels undercooked.",
+      "There is enough here to watch, not enough here to trust.",
+    ],
+    seed + 2,
+  );
 }
 
 function buildLegacySummary(verdictLine: string, traderRead: string[]): string {
@@ -653,66 +839,105 @@ function splitLegacySummary(summary: string): string[] {
   return parts.length ? parts.slice(0, 4) : [summary];
 }
 
-function deriveVerdictLine(verdict: SakuraVerdict, scores: SakuraScores, summary?: string): string {
+function deriveVerdictLine(verdict: SakuraVerdict, scores: SakuraScores, summary?: string, seed = 0): string {
   if (summary) {
     return cleanSentence(summary);
   }
 
   if (verdict === "bullish") {
     return scores.tradeability >= 7
-      ? "Tradable setup, but still worth stalking with discipline."
-      : "Interesting enough to stalk, not clean enough to ape blind.";
+      ? pickVariant(
+          [
+            "Tradable setup, but still worth stalking with discipline.",
+            "Good enough to trade, not good enough to switch your brain off.",
+            "This is tradable, but only if you stay selective.",
+          ],
+          seed,
+        )
+      : pickVariant(
+          [
+            "Interesting enough to stalk, not clean enough to ape blind.",
+            "Worth tracking, not worth lunging at.",
+            "There is enough here to monitor, not enough to blindly chase.",
+          ],
+          seed + 1,
+        );
   }
 
   return scores.exitLiquidityRisk >= 7
-    ? "Crowded or weak enough to treat like exit liquidity risk."
-    : "There is some attention here, but the structure still looks too soft.";
+    ? pickVariant(
+        [
+          "Crowded or weak enough to treat like exit liquidity risk.",
+          "This is weak enough that exit risk is the first thing to respect.",
+          "The setup looks crowded enough to punish lazy entries.",
+        ],
+        seed + 2,
+      )
+    : pickVariant(
+        [
+          "There is some attention here, but the structure still looks too soft.",
+          "Interest is there, but the setup still feels too loose.",
+          "There is a pulse here, but not enough to call it solid.",
+        ],
+        seed + 3,
+      );
 }
 
 function postProcessPayload(
   payload: ParsedSakuraPayload,
   tokenName?: string | null,
   tokenSymbol?: string | null,
+  tokenAddress?: string | null,
 ): ParsedSakuraPayload {
-  const seen = new Set<string>();
-  const verdictLine = stripLeadingTokenReference(payload.verdictLine, tokenName, tokenSymbol);
+  const seed = buildVariationSeed(tokenAddress || `${tokenName || ""}${tokenSymbol || ""}`);
+  const verdictLine = applyVariationPass(stripLeadingTokenReference(payload.verdictLine, tokenName, tokenSymbol), seed);
   const traderRead = compressTraderRead(
     payload.traderRead.map((line) => stripLeadingTokenReference(line, tokenName, tokenSymbol)),
-    seen,
+    seed,
   );
 
-  const bullCeiling = payload.verdict === "bearish" || payload.scores.tradeability <= 4 ? 3 : 5;
-  const bullCase = dedupeLines(
+  const bullCase = compressCaseLines(
     payload.bullCase.map((line) => stripLeadingTokenReference(line, tokenName, tokenSymbol)),
-    seen,
-    Math.min(3, bullCeiling),
+    "bull",
+    payload.verdict,
+    payload.scores,
+    seed + 11,
   );
-  const bearCase = dedupeLines(
+  const bearCase = compressCaseLines(
     payload.bearCase.map((line) => stripLeadingTokenReference(line, tokenName, tokenSymbol)),
-    seen,
-    3,
+    "bear",
+    payload.verdict,
+    payload.scores,
+    seed + 23,
   );
-  const finalLine = tightenFinalLine(stripLeadingTokenReference(payload.finalLine, tokenName, tokenSymbol), payload.verdict, payload.scores);
+  const finalLine = tightenFinalLine(
+    stripLeadingTokenReference(payload.finalLine, tokenName, tokenSymbol),
+    payload.verdict,
+    payload.scores,
+    seed,
+  );
 
   return {
     ...payload,
     verdictLine,
-    traderRead: traderRead.length ? traderRead : ["Enough attention to matter, but not enough structure to trust yet."],
-    bullCase: bullCase.length ? bullCase : ["Enough attention here to keep it on the watchlist."],
-    bearCase: bearCase.length ? bearCase : ["Late buyers can get farmed fast if this loses attention."],
+    traderRead: traderRead.length ? traderRead : [pickVariant(["There is interest here, but the structure still needs proof.", "Enough here to watch, not enough here to trust yet."], seed)],
+    bullCase: bullCase.length ? bullCase : [pickVariant(["There is enough here to keep it on the watchlist.", "There is still a reason to keep this on radar."], seed + 1)],
+    bearCase: bearCase.length ? bearCase : [pickVariant(["Late buyers are the first thing at risk if this slips.", "If this loses momentum, the last buyers get punished first."], seed + 2)],
     finalLine,
   };
 }
 
-function compressTraderRead(lines: string[], seen: Set<string>): string[] {
-  const normalized = dedupeLines(lines.map(strengthenLanguage), seen, 4);
+function compressTraderRead(lines: string[], seed: number): string[] {
+  const normalized = dedupeLines(lines.map((line) => applyVariationPass(line, seed)), seed, 4);
   const output: string[] = [];
+  const localTopics = new Set<string>();
 
   for (const line of normalized) {
     const tightened = tightenSentence(line);
     if (!tightened) continue;
     const key = classifyIdea(tightened);
-    if (output.some((item) => classifyIdea(item) === key)) continue;
+    if (localTopics.has(key)) continue;
+    localTopics.add(key);
     output.push(tightened);
     if (output.length >= 2) break;
   }
@@ -720,18 +945,43 @@ function compressTraderRead(lines: string[], seen: Set<string>): string[] {
   return output;
 }
 
-function dedupeLines(lines: string[], seen: Set<string>, limit: number): string[] {
+function compressCaseLines(
+  lines: string[],
+  mode: "bull" | "bear",
+  verdict: SakuraVerdict,
+  scores: SakuraScores,
+  seed: number,
+): string[] {
+  const prepared = dedupeLines(lines, seed, 5);
   const output: string[] = [];
-  const ranked = lines
-    .map((raw) => strengthenLanguage(cleanSentence(raw)))
-    .filter(Boolean)
-    .sort((left, right) => scoreSentenceStrength(right) - scoreSentenceStrength(left));
 
-  for (const line of ranked) {
+  for (const line of prepared) {
+    const tightened = tightenSentence(line);
+    if (!tightened) continue;
+    if (mode === "bull" && (verdict === "bearish" || scores.tradeability <= 4) && looksOvereagerBullLine(tightened)) {
+      continue;
+    }
+    output.push(tightened);
+    if (output.length >= 3) break;
+  }
+
+  return output;
+}
+
+function dedupeLines(lines: string[], seed: number, limit: number): string[] {
+  const output: string[] = [];
+  const seen = new Set<string>();
+  const localTopics = new Set<string>();
+  const prepared = lines.map((raw) => applyVariationPass(cleanSentence(raw), seed)).filter(Boolean);
+
+  for (const line of prepared) {
     if (!line) continue;
     const key = normalizeIdeaKey(line);
     if (seen.has(key)) continue;
+    const topic = classifyIdea(line);
+    if (localTopics.has(topic)) continue;
     seen.add(key);
+    localTopics.add(topic);
     output.push(tightenSentence(line));
     if (output.length >= limit) break;
   }
@@ -757,18 +1007,31 @@ function stripLeadingTokenReference(value: string, tokenName?: string | null, to
   return next;
 }
 
-function strengthenLanguage(value: string): string {
-  return value
-    .replace(/\brespectable\b/gi, "decent but not clean")
-    .replace(/\bat least present\b/gi, "thin but usable")
-    .replace(/\bmay exist\b/gi, "is there")
-    .replace(/\bgood enough to support a rotation if buyers show up\b/gi, "just enough to matter if buyers show up")
-    .replace(/\bthere is enough structure here to treat it as tradable, not just noise\b/gi, "there is enough structure here to trade, not just stare at")
-    .replace(/\blaunch quality is respectable for a bsc meme setup\b/gi, "launch quality is decent but not clean")
-    .replace(/\benough attention here to keep it on radar\b/gi, "enough attention here to keep it on the watchlist")
-    .replace(/\blate buyers can get clipped fast here\b/gi, "late buyers can get farmed here")
-    .replace(/\bthis has room to be stalked as a rotation candidate instead of ignored\b/gi, "this is stalkable if rotation comes through")
-    .replace(/\bsocial shell is good enough to support a rotation if buyers show up\b/gi, "social shell is thin but usable if buyers show up");
+function applyVariationPass(value: string, seed: number): string {
+  let next = cleanSentence(value);
+  if (!next) return "";
+
+  const replacements: Array<[RegExp, string[]]> = [
+    [/\brespectable\b/gi, ["decent but not clean", "solid enough for a look", "good enough to note"]],
+    [/\bat least present\b/gi, ["thin but usable", "barely there but usable", "just enough to register"]],
+    [/\bmay exist\b/gi, ["is there", "shows up", "does appear"]],
+    [/\bsocial backing is thin\b/gi, ["the social layer is thin", "the social side still looks light", "support around it still feels shallow"]],
+    [/\bliquidity still looks weak\b/gi, ["liquidity still feels light", "liquidity still looks soft", "the liquidity side still needs work"]],
+    [/\bexit risk is elevated\b/gi, ["exit risk is real here", "this can turn into an exit-farm", "the exit risk is hard to ignore"]],
+    [/\benough attention to matter\b/gi, ["enough attention here to matter", "enough eyes on it to count", "just enough attention to keep it live"]],
+    [/\bwatchlist material, not chase material\b/gi, ["watchlist material, not chase material", "stalk it, do not chase it", "keep it close, not in size"]],
+    [/\blate buyers can get farmed here\b/gi, ["late buyers can get farmed here", "late entries can get punished here", "late buyers are exposed here"]],
+  ];
+
+  for (const [index, [pattern, options]] of replacements.entries()) {
+    next = next.replace(pattern, () => pickVariant(options, seed + index));
+  }
+
+  if (looksTemplateLike(next)) {
+    next = paraphraseTemplateLine(next, seed);
+  }
+
+  return next;
 }
 
 function tightenSentence(value: string): string {
@@ -783,11 +1046,10 @@ function tightenSentence(value: string): string {
 
 function scoreSentenceStrength(value: string): number {
   let score = value.split(" ").length;
-  if (/\bnot enough structure to trust\b/i.test(value)) score += 5;
-  if (/\blate buyers can get farmed\b/i.test(value)) score += 5;
-  if (/\bwatchlist material, not chase material\b/i.test(value)) score += 4;
-  if (/\benough attention to matter\b/i.test(value)) score += 3;
-  if (/\bdecent but not clean\b/i.test(value)) score += 2;
+  if (/\bstructure\b/i.test(value)) score += 2;
+  if (/\brotation\b|\btradable\b/i.test(value)) score += 1;
+  if (/\blate buyers\b|\bexit\b/i.test(value)) score += 2;
+  if (/\bmarket cap\b|\bliquidity\b|\bsocial\b|\blaunch\b/i.test(value)) score += 1;
   return score;
 }
 
@@ -803,34 +1065,82 @@ function classifyIdea(value: string): string {
   return normalizeIdeaKey(value);
 }
 
-function tightenFinalLine(value: string, verdict: SakuraVerdict, scores: SakuraScores): string {
-  const cleaned = strengthenLanguage(cleanSentence(value));
+function tightenFinalLine(value: string, verdict: SakuraVerdict, scores: SakuraScores, seed: number): string {
+  const cleaned = applyVariationPass(cleanSentence(value), seed);
   const words = cleaned.split(/\s+/).filter(Boolean);
   if (words.length <= 12) {
     return cleaned;
   }
 
   if (verdict === "bullish") {
-    return scores.tradeability >= 7 ? "Good enough to trade. Not good enough to trust." : "Watch it first. Let it earn the chase.";
+    return scores.tradeability >= 7
+      ? pickVariant(["Good enough to trade. Not good enough to trust.", "Trade it if you want. Trust it if you are careless.", "Playable tape. Still not trust tape."], seed)
+      : pickVariant(["Watch it first. Let it earn the chase.", "Keep it close. Make it prove itself.", "Track it first. Do not pay up yet."], seed + 1);
   }
 
-  return scores.exitLiquidityRisk >= 7 ? "Looks crowded. Let someone else pay the exit." : "Watchlist only. Not clean enough to trust.";
+  return scores.exitLiquidityRisk >= 7
+    ? pickVariant(["Looks crowded. Let someone else pay the exit.", "Crowded setup. Let someone else fund the unwind.", "Too crowded for comfort. Let others test the exit."], seed + 2)
+    : pickVariant(["Watchlist only. Not clean enough to trust.", "Track it, do not trust it.", "Worth monitoring. Not worth size yet."], seed + 3);
 }
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function deriveFinalLine(verdict: SakuraVerdict, scores: SakuraScores): string {
+function buildVariationSeed(value: string): number {
+  let hash = 0;
+  for (const char of String(value || "")) {
+    hash = (hash * 31 + char.charCodeAt(0)) | 0;
+  }
+  return Math.abs(hash);
+}
+
+function pickVariant<T>(items: T[], seed: number): T {
+  return items[Math.abs(seed) % items.length];
+}
+
+function looksTemplateLike(value: string): boolean {
+  const lowered = value.toLowerCase();
+  return (
+    lowered.includes("enough attention to matter") ||
+    lowered.includes("watchlist material, not chase material") ||
+    lowered.includes("late buyers can get farmed here") ||
+    lowered.includes("social backing is thin") ||
+    lowered.includes("liquidity still looks weak")
+  );
+}
+
+function paraphraseTemplateLine(value: string, seed: number): string {
+  let next = value;
+  const swaps: Array<[RegExp, string[]]> = [
+    [/\benough attention to matter\b/gi, ["enough attention here to count", "enough interest here to stay relevant", "enough eyes on it that it can still move"]],
+    [/\bwatchlist material, not chase material\b/gi, ["keep it on the watchlist, not in a chase", "track it first, do not force the entry", "watch it before you pay up"]],
+    [/\blate buyers can get farmed here\b/gi, ["late buyers can get clipped here", "late entries can get punished here", "this can still punish the last money in"]],
+    [/\bsocial backing is thin\b/gi, ["the social side still looks light", "support around it still feels shallow", "the social layer still needs more weight"]],
+    [/\bliquidity still looks weak\b/gi, ["liquidity still feels light", "the liquidity side still needs work", "liquidity still looks softer than it should"]],
+  ];
+
+  for (const [index, [pattern, options]] of swaps.entries()) {
+    next = next.replace(pattern, () => pickVariant(options, seed + index));
+  }
+
+  return next;
+}
+
+function looksOvereagerBullLine(value: string): boolean {
+  return /\b(send|rip|explod|fly|easy money|ape|moon)\b/i.test(value);
+}
+
+function deriveFinalLine(verdict: SakuraVerdict, scores: SakuraScores, seed = 0): string {
   if (verdict === "bullish") {
     return scores.tradeability >= 7
-      ? "Good enough to trade. Not good enough to get lazy."
-      : "Keep it on watch, but make it earn the chase.";
+      ? pickVariant(["Good enough to trade. Not good enough to get lazy.", "Playable if you stay sharp.", "Tradable, but only with discipline."], seed)
+      : pickVariant(["Keep it on watch, but make it earn the chase.", "Watch it first. Make it prove itself.", "On radar, not on autopilot."], seed + 1);
   }
 
   return scores.exitLiquidityRisk >= 7
-    ? "Looks dangerous enough to fade until structure proves otherwise."
-    : "Fine to stalk from distance, not something to trust with size yet.";
+    ? pickVariant(["Looks dangerous enough to fade until structure proves otherwise.", "This looks easier to fade than trust.", "Let structure show up before you respect it."], seed + 2)
+    : pickVariant(["Fine to stalk from distance, not something to trust with size yet.", "Watch from distance. No reason to force it.", "You can track it. You do not need to own it."], seed + 3);
 }
 
 function normalizeScores(value: unknown): SakuraScores {
