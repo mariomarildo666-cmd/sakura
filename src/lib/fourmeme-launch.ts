@@ -130,6 +130,7 @@ export type LaunchTokenFromRequestInput = {
   webUrl?: string;
   twitterUrl?: string;
   telegramUrl?: string;
+  imagePath?: string;
   dryRun?: boolean;
   configPath?: string;
 };
@@ -182,6 +183,7 @@ export async function launchTokenFromRequest(input: LaunchTokenFromRequestInput)
     name: input.name.trim(),
     shortName: sanitizeTicker(input.shortName),
     desc: input.desc?.trim() || `${input.name.trim()} launched by Sakura via Four.meme.`,
+    ...(typeof input.imagePath === "string" ? { imagePath: input.imagePath.trim() } : {}),
     ...(typeof input.webUrl === "string" ? { webUrl: input.webUrl.trim() } : {}),
     ...(typeof input.twitterUrl === "string" ? { twitterUrl: input.twitterUrl.trim() } : {}),
     ...(typeof input.telegramUrl === "string" ? { telegramUrl: input.telegramUrl.trim() } : {}),

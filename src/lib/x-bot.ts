@@ -1,5 +1,5 @@
 ﻿import { createHmac, randomBytes } from "node:crypto";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { analyzeWithSakura } from "../agents/sakura.js";
@@ -39,6 +39,14 @@ type XMention = {
   conversationId: string | null;
   createdAt: string | null;
   author: XUser | null;
+  media: XMedia[];
+};
+
+type XMedia = {
+  mediaKey: string;
+  type: string;
+  url: string | null;
+  previewImageUrl: string | null;
 };
 
 type ProcessedMention = {
@@ -99,12 +107,21 @@ type MentionsResponse = {
     author_id: string;
     conversation_id?: string;
     created_at?: string;
+    attachments?: {
+      media_keys?: string[];
+    };
   }>;
   includes?: {
     users?: Array<{
       id: string;
       username: string;
       name?: string;
+    }>;
+    media?: Array<{
+      media_key: string;
+      type: string;
+      url?: string;
+      preview_image_url?: string;
     }>;
   };
   meta?: {
@@ -186,6 +203,7 @@ export async function processMentionsOnce() {
     if (launchCommand) {
       console.log("parsed command", launchCommand);
       console.log("launch mode", config.dryRun ? "dry-run" : "live");
+      let tempImagePath: string | null = null;
       console.log("launch request payload", {
         name: launchCommand.name,
         shortName: launchCommand.shortName,
@@ -195,8 +213,15 @@ export async function processMentionsOnce() {
         telegramUrl: launchCommand.telegramUrl || null,
       });
       try {
+        const imageSelection = await prepareLaunchImage(config, mention);
+        if (imageSelection.error) {
+          throw new Error(imageSelection.error);
+        }
+
+        tempImagePath = imageSelection.localPath;
         const launch = await launchTokenFromRequest({
           ...launchCommand,
+          ...(imageSelection.localPath ? { imagePath: imageSelection.localPath } : {}),
           dryRun: config.dryRun,
         });
         console.log("launch result", launch);
@@ -257,6 +282,10 @@ export async function processMentionsOnce() {
           note: error instanceof Error ? error.message : "launch failed",
         });
         continue;
+      } finally {
+        if (tempImagePath) {
+          await cleanupTempImage(tempImagePath);
+        }
       }
     }
 
@@ -410,9 +439,10 @@ async function getBotUserId(config: XBotConfig) {
 async function fetchMentions(config: XBotConfig, userId: string, sinceId: string | null) {
   const url = new URL(`https://api.x.com/2/users/${encodeURIComponent(userId)}/mentions`);
   url.searchParams.set("max_results", String(config.maxResults));
-  url.searchParams.set("tweet.fields", "created_at,author_id,conversation_id");
-  url.searchParams.set("expansions", "author_id");
+  url.searchParams.set("tweet.fields", "created_at,author_id,conversation_id,attachments");
+  url.searchParams.set("expansions", "author_id,attachments.media_keys");
   url.searchParams.set("user.fields", "username,name");
+  url.searchParams.set("media.fields", "type,url,preview_image_url");
   if (sinceId) {
     url.searchParams.set("since_id", sinceId);
   }
@@ -430,9 +460,19 @@ async function fetchMentions(config: XBotConfig, userId: string, sinceId: string
 
   const json = (await response.json()) as MentionsResponse;
   const users = new Map<string, XUser>();
+  const mediaMap = new Map<string, XMedia>();
   for (const user of json.includes?.users || []) {
     if (!user.id || !user.username) continue;
     users.set(user.id, { id: user.id, username: user.username, name: user.name });
+  }
+  for (const media of json.includes?.media || []) {
+    if (!media.media_key || !media.type) continue;
+    mediaMap.set(media.media_key, {
+      mediaKey: media.media_key,
+      type: media.type,
+      url: media.url || null,
+      previewImageUrl: media.preview_image_url || null,
+    });
   }
 
   return (json.data || []).map((mention) => ({
@@ -442,6 +482,9 @@ async function fetchMentions(config: XBotConfig, userId: string, sinceId: string
     conversationId: mention.conversation_id || null,
     createdAt: mention.created_at || null,
     author: users.get(mention.author_id) || null,
+    media: (mention.attachments?.media_keys || [])
+      .map((mediaKey) => mediaMap.get(mediaKey))
+      .filter((item): item is XMedia => Boolean(item)),
   })) satisfies XMention[];
 }
 
@@ -716,6 +759,79 @@ function captureDeployPlusFields(text: string) {
 
 function sanitizeFieldValue(value: string) {
   return value.replace(/^["“]|["”]$/g, "").trim();
+}
+
+async function prepareLaunchImage(config: XBotConfig, mention: XMention) {
+  if (!mention.media.length) {
+    console.log("Using default image:", true);
+    return {
+      localPath: null,
+      error: null,
+    };
+  }
+
+  const media = mention.media[0];
+  const mediaUrl = media.url || media.previewImageUrl;
+
+  if (media.type !== "photo" || !mediaUrl) {
+    return {
+      localPath: null,
+      error: "Invalid image format. Use PNG or JPG.",
+    };
+  }
+
+  const extension = inferImageExtension(mediaUrl);
+  if (!extension || !["png", "jpg", "jpeg"].includes(extension)) {
+    return {
+      localPath: null,
+      error: "Invalid image format. Use PNG or JPG.",
+    };
+  }
+
+  console.log("Image detected:", mediaUrl);
+  const localPath = await downloadLaunchImage(config, mediaUrl, extension);
+  console.log("Image saved to:", localPath);
+
+  return {
+    localPath,
+    error: null,
+  };
+}
+
+async function downloadLaunchImage(config: XBotConfig, imageUrl: string, extension: string) {
+  const tempDir = path.resolve(".data");
+  await mkdir(tempDir, { recursive: true });
+  const localPath = path.join(tempDir, `temp-image-${Date.now()}-${randomBytes(4).toString("hex")}.${extension}`);
+  const response = await fetch(imageUrl, {
+    headers: {
+      Authorization: `Bearer ${config.bearerToken}`,
+      Accept: "image/*,*/*",
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Image download failed: ${response.status} ${response.statusText}`);
+  }
+
+  const arrayBuffer = await response.arrayBuffer();
+  await writeFile(localPath, Buffer.from(arrayBuffer));
+  return localPath;
+}
+
+function inferImageExtension(mediaUrl: string) {
+  try {
+    const pathname = new URL(mediaUrl).pathname.toLowerCase();
+    if (pathname.endsWith(".png")) return "png";
+    if (pathname.endsWith(".jpg")) return "jpg";
+    if (pathname.endsWith(".jpeg")) return "jpeg";
+  } catch {}
+  return null;
+}
+
+async function cleanupTempImage(localPath: string) {
+  try {
+    await unlink(localPath);
+  } catch {}
 }
 
 function composeLaunchReplyText(
