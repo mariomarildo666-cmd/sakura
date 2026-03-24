@@ -315,9 +315,9 @@ body:has(#result.hidden) .shell {
 
 .hero-shell {
   display: grid;
-  grid-template-columns: minmax(0, 0.96fr) minmax(360px, 1.04fr);
+  grid-template-columns: 1fr 1fr;
   align-items: center;
-  gap: 28px;
+  gap: 48px;
   min-height: 500px;
   padding: 34px 26px 0 88px;
 }
@@ -325,6 +325,7 @@ body:has(#result.hidden) .shell {
 .hero-copy {
   max-width: 560px;
   padding-top: 8px;
+  min-width: 0;
 }
 
 .hero-index {
@@ -339,16 +340,20 @@ body:has(#result.hidden) .shell {
 .hero-title {
   margin: 0;
   font-family: var(--display);
-  font-size: clamp(54px, 5.8vw, 72px);
-  line-height: 0.88;
+  max-width: 560px;
+  font-size: clamp(36px, 5vw, 72px);
+  line-height: 1.08;
   letter-spacing: 0;
   font-weight: 700;
   color: var(--heading);
+  word-break: keep-all;
+  overflow-wrap: normal;
+  text-wrap: balance;
 }
 
 .hero-subtitle {
   margin: 24px 0 0;
-  max-width: 460px;
+  max-width: 520px;
   color: var(--body);
   font-size: 17px;
   line-height: 1.6;
@@ -359,6 +364,7 @@ body:has(#result.hidden) .shell {
   min-height: 460px;
   display: grid;
   place-items: center;
+  min-width: 0;
 }
 
 .hero-character-wrap {
@@ -382,7 +388,8 @@ body:has(#result.hidden) .shell {
 .hero-character {
   position: relative;
   z-index: 1;
-  width: min(430px, 100%);
+  width: 100%;
+  max-width: 420px;
   max-height: 470px;
   object-fit: contain;
   filter:
@@ -1180,6 +1187,10 @@ body:has(#result.hidden) .shell {
     padding: 28px 0 0;
   }
 
+  .hero-copy {
+    max-width: 600px;
+  }
+
   .hero-history,
   .status {
     margin-left: 0;
@@ -1191,7 +1202,8 @@ body:has(#result.hidden) .shell {
   }
 
   .hero-character {
-    width: min(360px, 100%);
+    width: 100%;
+    max-width: 360px;
     max-height: 390px;
   }
 
@@ -1238,7 +1250,7 @@ body:has(#result.hidden) .shell {
   }
 
   .hero-title {
-    font-size: 44px;
+    font-size: 36px;
   }
 
   .hero-subtitle {
@@ -1250,7 +1262,8 @@ body:has(#result.hidden) .shell {
   }
 
   .hero-character {
-    width: min(300px, 100%);
+    width: 100%;
+    max-width: 300px;
     max-height: 330px;
   }
 
