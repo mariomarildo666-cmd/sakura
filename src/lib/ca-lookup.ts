@@ -54,11 +54,35 @@ type HolderSecurityRecord = {
   holder_count?: string | number | null;
   holders?: Array<{
     address?: string | null;
+    tag?: string | null;
+    label?: string | null;
+    name?: string | null;
     percent?: string | number | null;
     is_locked?: string | number | boolean | null;
     is_contract?: string | number | boolean | null;
   }> | null;
 };
+
+type HolderClassification = "lp_pair" | "burn" | "router" | "locker" | "contract" | "regular_holder" | "unknown";
+
+type ClassifiedHolder = {
+  address: string;
+  label: string | null;
+  percent: number | null;
+  classification: HolderClassification;
+  isContract: boolean;
+  isLocked: boolean;
+};
+
+const BURN_ADDRESSES = new Set([
+  "0x0000000000000000000000000000000000000000",
+  "0x000000000000000000000000000000000000dead",
+]);
+
+const KNOWN_ROUTER_ADDRESSES = new Set([
+  "0x10ed43c718714eb63d5aa57b78b54704e256024e", // PancakeSwap V2
+  "0x13f4ea83d0bd40e75c8222255bc855a974568dd4", // PancakeSwap V3
+]);
 
 export type ChartCandle = {
   time: number;
@@ -385,20 +409,45 @@ async function fetchHolderSignals(tokenAddress: `0x${string}`) {
     }
 
     const holders = Array.isArray(record.holders) ? record.holders : [];
-    const percents = holders
-      .map((holder) => Number(holder?.percent || 0))
-      .filter((value) => Number.isFinite(value) && value > 0);
+    const pairCandidates = await fetchDexScreenerPairs(tokenAddress);
+    const activePair = pickBestDexPair(pairCandidates);
+    const classified = holders
+      .map((holder) => classifyHolder(holder, activePair?.pairAddress || null))
+      .filter((holder): holder is ClassifiedHolder => Boolean(holder));
 
-    const topHolderPercent = percents.length ? Math.max(...percents) : null;
-    const topTenPercent = percents
-      .sort((left, right) => right - left)
-      .slice(0, 10)
-      .reduce((sum, value) => sum + value, 0);
+    for (const holder of classified) {
+      console.log("HOLDER CLASSIFICATION", {
+        address: holder.address,
+        label: holder.label,
+        classification: holder.classification,
+        percent: holder.percent,
+      });
+    }
+
+    const rawHolders = classified
+      .filter((holder) => holder.percent && holder.percent > 0)
+      .sort((left, right) => Number(right.percent || 0) - Number(left.percent || 0));
+    const filteredHolders = rawHolders.filter((holder) => holder.classification === "regular_holder");
+
+    const topHolderPercentRaw = rawHolders.length ? Number(rawHolders[0].percent || 0) : null;
+    const topHolderPercentFiltered = filteredHolders.length ? Number(filteredHolders[0].percent || 0) : null;
+    const rawTopHolders = rawHolders.slice(0, 10).map(minifyHolder);
+    const topHoldersFiltered = filteredHolders.slice(0, 10).map(minifyHolder);
+    const distributionConcentration = filteredHolders.slice(0, 10).reduce((sum, holder) => sum + Number(holder.percent || 0), 0);
+    const top3PercentFiltered = filteredHolders.slice(0, 3).reduce((sum, holder) => sum + Number(holder.percent || 0), 0);
 
     return {
       totalHolders: toNullableNumber(record.holder_count),
-      topHolderPercent,
-      distributionConcentration: topTenPercent || null,
+      topHolderPercent: topHolderPercentFiltered,
+      topHolderPercentRaw,
+      topHolderPercentFiltered,
+      distributionConcentration: distributionConcentration || null,
+      circulatingHolderConcentration: distributionConcentration || null,
+      top3PercentFiltered: top3PercentFiltered || null,
+      rawTopHolders,
+      topHoldersFiltered,
+      lpHolderDetected: rawHolders.some((holder) => holder.classification === "lp_pair"),
+      burnHolderDetected: rawHolders.some((holder) => holder.classification === "burn"),
     };
   } catch {
     return emptyHolderSignals();
@@ -409,7 +458,15 @@ function emptyHolderSignals() {
   return {
     totalHolders: null,
     topHolderPercent: null,
+    topHolderPercentRaw: null,
+    topHolderPercentFiltered: null,
     distributionConcentration: null,
+    circulatingHolderConcentration: null,
+    top3PercentFiltered: null,
+    rawTopHolders: [] as Array<ReturnType<typeof minifyHolder>>,
+    topHoldersFiltered: [] as Array<ReturnType<typeof minifyHolder>>,
+    lpHolderDetected: false,
+    burnHolderDetected: false,
   };
 }
 
@@ -421,4 +478,54 @@ function toNullableNumber(value: unknown) {
 function getPairAgeMinutes(pairCreatedAt?: number | null) {
   if (!pairCreatedAt || !Number.isFinite(pairCreatedAt)) return null;
   return Math.max(0, Math.round((Date.now() - Number(pairCreatedAt)) / 60000));
+}
+
+function classifyHolder(
+  holder: NonNullable<HolderSecurityRecord["holders"]>[number],
+  pairAddress: string | null,
+): ClassifiedHolder | null {
+  const address = String(holder?.address || "").toLowerCase();
+  if (!address) return null;
+
+  const label = [holder?.label, holder?.tag, holder?.name].find((value) => typeof value === "string" && value.length > 0) || null;
+  const percent = toNullableNumber(holder?.percent);
+  const isLocked = Boolean(holder?.is_locked);
+  const isContract = Boolean(holder?.is_contract);
+  const labelText = String(label || "").toLowerCase();
+
+  let classification: HolderClassification = "unknown";
+
+  if (BURN_ADDRESSES.has(address)) {
+    classification = "burn";
+  } else if (pairAddress && address === pairAddress.toLowerCase()) {
+    classification = "lp_pair";
+  } else if (KNOWN_ROUTER_ADDRESSES.has(address) || /\brouter\b/.test(labelText)) {
+    classification = "router";
+  } else if (isLocked || /\b(lock|locker|vesting|vest)\b/.test(labelText)) {
+    classification = "locker";
+  } else if (/\b(lp|pair|pool|amm|pancakeswap|liquidity)\b/.test(labelText)) {
+    classification = "lp_pair";
+  } else if (isContract) {
+    classification = "contract";
+  } else if (/^0x[a-f0-9]{40}$/.test(address)) {
+    classification = "regular_holder";
+  }
+
+  return {
+    address,
+    label,
+    percent,
+    classification,
+    isContract,
+    isLocked,
+  };
+}
+
+function minifyHolder(holder: ClassifiedHolder) {
+  return {
+    address: holder.address,
+    label: holder.label,
+    percent: holder.percent,
+    classification: holder.classification,
+  };
 }

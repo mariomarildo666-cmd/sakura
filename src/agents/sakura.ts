@@ -346,7 +346,10 @@ SOURCE AWARE WRITING RULES:
 - If social metrics are missing, say social quality is unclear or unverified.
 - If holder data is missing, say holder quality is unknown.
 - If creator history is missing, say creator quality is unverified.
-- If narrative evidence is weak, say narrative strength is still unclear.`;
+- If narrative evidence is weak, say narrative strength is still unclear.
+- If LP, burn, router, or locker addresses dominate the raw holder list, do not treat raw concentration as normal whale concentration.
+- Use filtered holder concentration for holder-quality commentary whenever it is provided.
+- If raw holder concentration looks bad but filtered concentration looks better because LP or burn dominates, say that clearly.`;
 
 export async function analyzeWithSakura(rawInput: string): Promise<SakuraResult> {
   const lookup = await lookupCa(rawInput);
@@ -428,8 +431,16 @@ async function requestHuggingFaceAnalysis(
     sells24h: lookup.dexScreener?.sells24h,
     pairAgeMinutes: lookup.dexScreener?.pairAgeMinutes,
     totalHolders: lookup.holders?.totalHolders,
-    topHolderPercent: lookup.holders?.topHolderPercent,
+    topHolderPercent: lookup.holders?.topHolderPercentFiltered,
+    topHolderPercentRaw: lookup.holders?.topHolderPercentRaw,
+    topHolderPercentFiltered: lookup.holders?.topHolderPercentFiltered,
     distributionConcentration: lookup.holders?.distributionConcentration,
+    circulatingHolderConcentration: lookup.holders?.circulatingHolderConcentration,
+    top3PercentFiltered: lookup.holders?.top3PercentFiltered,
+    lpHolderDetected: lookup.holders?.lpHolderDetected,
+    burnHolderDetected: lookup.holders?.burnHolderDetected,
+    rawTopHolders: lookup.holders?.rawTopHolders,
+    topHoldersFiltered: lookup.holders?.topHoldersFiltered,
     heuristicReference: {
       verdict: heuristic.verdict,
       scores: heuristic.scores,
@@ -469,8 +480,12 @@ async function requestHuggingFaceAnalysis(
       sells24h: evidence.hasSells24h,
       pairAge: evidence.hasPairAge,
       holderCount: evidence.hasHolderData,
-      topHolderPercent: lookup.holders?.topHolderPercent,
+      topHolderPercentRaw: lookup.holders?.topHolderPercentRaw,
+      topHolderPercentFiltered: lookup.holders?.topHolderPercentFiltered,
       distributionConcentration: lookup.holders?.distributionConcentration,
+      top3PercentFiltered: lookup.holders?.top3PercentFiltered,
+      lpHolderDetected: lookup.holders?.lpHolderDetected,
+      burnHolderDetected: lookup.holders?.burnHolderDetected,
     },
     missingSignals: [
       "creator history",
@@ -699,7 +714,7 @@ function scoreLookup(lookup: Awaited<ReturnType<typeof lookupCa>>): SakuraScores
   const buys24h = Number(lookup.dexScreener?.buys24h || 0);
   const sells24h = Number(lookup.dexScreener?.sells24h || 0);
   const totalHolders = Number(lookup.holders?.totalHolders || 0);
-  const topHolderPercent = Number(lookup.holders?.topHolderPercent || 0);
+  const topHolderPercent = Number(lookup.holders?.topHolderPercentFiltered || 0);
   const tradingFeeRate = Number(lookup.summary.tradingFeeRate || 0);
   const raisedBnb = Number(lookup.summary.raisedBnb || 0);
   const maxRaisedBnb = Number(lookup.summary.maxRaisedBnb || 0);
@@ -1321,7 +1336,7 @@ function buildEvidenceContext(lookup: Awaited<ReturnType<typeof lookupCa>>): Sak
     hasPairAge: Number(lookup.dexScreener?.pairAgeMinutes || 0) > 0,
     hasCreatorHistory: false,
     hasHolderData: Number(lookup.holders?.totalHolders || 0) > 0,
-    hasWalletDistribution: Number(lookup.holders?.topHolderPercent || 0) > 0,
+    hasWalletDistribution: Number(lookup.holders?.topHolderPercentFiltered || 0) > 0,
     hasSocialMetrics: false,
     hasNarrativeMetrics: false,
     hasAttentionMetrics:
