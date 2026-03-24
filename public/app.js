@@ -245,10 +245,19 @@ async function renderChart(data) {
   setTimeframeButtonsDisabled(true);
   chartStatus.classList.add("hidden");
   chartStatus.textContent = "";
-  chartFrame.innerHTML = "";
+  chartFrame.innerHTML = `
+    <div class="chart-skeleton" aria-hidden="true">
+      <div class="chart-skeleton-bar chart-skeleton-bar-lg"></div>
+      <div class="chart-skeleton-grid">
+        <span></span><span></span><span></span><span></span>
+      </div>
+      <div class="chart-skeleton-wave"></div>
+    </div>
+  `;
 
   const pair = await resolveDexPairForChart(data);
   if (!pair?.pairAddress) {
+    chartFrame.innerHTML = "";
     chartLink.removeAttribute("href");
     setChartRibbonFromMarket(data, false);
     chartStatus.textContent = "No liquidity pair yet.";
