@@ -18,9 +18,9 @@ const openFourmeme = document.querySelector("#open-fourmeme");
 const statName = document.querySelector("#stat-name");
 const statSymbol = document.querySelector("#stat-symbol");
 const statAi = document.querySelector("#stat-ai");
-const socialWebsite = document.querySelector("#social-website");
-const socialTwitter = document.querySelector("#social-twitter");
-const socialTelegram = document.querySelector("#social-telegram");
+let socialWebsite = document.querySelector("#social-website");
+let socialTwitter = document.querySelector("#social-twitter");
+let socialTelegram = document.querySelector("#social-telegram");
 const contractAddress = document.querySelector("#contract-address");
 const creatorAddress = document.querySelector("#creator-address");
 const copyContractInline = document.querySelector("#copy-contract-inline");
@@ -298,20 +298,42 @@ function createMarketStat(label, value) {
 function setSocialButton(element, href, label) {
   if (!element) return;
 
-  const isLive = typeof href === "string" && href.length > 0;
-  element.textContent = label;
-  element.classList.toggle("is-live", isLive);
-  element.classList.toggle("is-missing", !isLive);
+  const normalizedHref = typeof href === "string" ? href.trim() : "";
+  const isLive = !!normalizedHref && normalizedHref !== "#" && normalizedHref.length > 5;
+  const nextTag = isLive ? "a" : "button";
+  let nextElement = element;
+
+  if (element.tagName.toLowerCase() !== nextTag) {
+    nextElement = document.createElement(nextTag);
+    nextElement.id = element.id;
+    nextElement.className = "token-social-btn";
+    if (element.parentNode) {
+      element.parentNode.replaceChild(nextElement, element);
+    }
+  }
+
+  nextElement.textContent = label;
+  nextElement.classList.toggle("is-live", isLive);
+  nextElement.classList.toggle("is-missing", !isLive);
 
   if (isLive) {
-    element.href = href;
-    element.removeAttribute("aria-disabled");
-    element.tabIndex = 0;
+    nextElement.setAttribute("href", normalizedHref);
+    nextElement.setAttribute("target", "_blank");
+    nextElement.setAttribute("rel", "noopener noreferrer");
+    nextElement.removeAttribute("disabled");
+    nextElement.removeAttribute("aria-disabled");
   } else {
-    element.href = "#";
-    element.setAttribute("aria-disabled", "true");
-    element.tabIndex = -1;
+    nextElement.removeAttribute("href");
+    nextElement.removeAttribute("target");
+    nextElement.removeAttribute("rel");
+    nextElement.setAttribute("type", "button");
+    nextElement.setAttribute("disabled", "true");
+    nextElement.setAttribute("aria-disabled", "true");
   }
+
+  if (nextElement.id === "social-website") socialWebsite = nextElement;
+  if (nextElement.id === "social-twitter") socialTwitter = nextElement;
+  if (nextElement.id === "social-telegram") socialTelegram = nextElement;
 }
 
 function resetSocialButtons() {
