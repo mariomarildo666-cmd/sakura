@@ -60,6 +60,20 @@ type LaunchCommand = {
   telegramUrl?: string;
 };
 
+type LaunchParseResult =
+  | {
+      command: LaunchCommand;
+      error: null;
+    }
+  | {
+      command: null;
+      error: string;
+    }
+  | {
+      command: null;
+      error: null;
+    };
+
 type ProcessMentionsResult = {
   mode: "dry-run" | "live";
   mentionsFetched: number;
@@ -144,7 +158,30 @@ export async function processMentionsOnce() {
     console.log("mention text received", mention.text);
 
     const contractAddress = extractContractAddress(mention.text);
-    const launchCommand = parseLaunchCommand(mention.text);
+    const launchParse = parseLaunchCommand(mention.text);
+    const launchCommand = launchParse.command;
+
+    if (launchParse.error) {
+      const failureText = fitTweet([`@${trimUsername(mention.author?.username || "anon")} ${launchParse.error}`], 280);
+      let replyTweetId: string | null = null;
+      if (!config.dryRun) {
+        try {
+          replyTweetId = await postReply(config, mention.id, failureText);
+        } catch {}
+      }
+
+      processed.add(mention.id);
+      results.push({
+        mentionId: mention.id,
+        authorUsername: mention.author?.username || null,
+        contractAddress: null,
+        status: config.dryRun ? "drafted" : "failed",
+        replyText: failureText,
+        replyTweetId,
+        note: "invalid launch command",
+      });
+      continue;
+    }
 
     if (launchCommand) {
       console.log("parsed command", launchCommand);
@@ -533,7 +570,7 @@ function extractContractAddress(text: string) {
   return match ? match[0] : null;
 }
 
-function parseLaunchCommand(text: string): LaunchCommand | null {
+function parseLaunchCommand(text: string): LaunchParseResult {
   const lowered = text.toLowerCase();
   const hasLaunchVerb =
     lowered.includes("launch") ||
@@ -543,13 +580,28 @@ function parseLaunchCommand(text: string): LaunchCommand | null {
     lowered.includes("cikar");
 
   if (!hasLaunchVerb) {
-    return null;
+    return { command: null, error: null };
+  }
+
+  const deployPlusFields = captureDeployPlusFields(text);
+  if (deployPlusFields?.error) {
+    return { command: null, error: deployPlusFields.error };
   }
 
   const simpleFields = captureSimpleDeployFields(text);
   const fields = {
-    name: captureField(text, ["name", "isim"]) ?? captureQuotedValueAfterCommand(text) ?? simpleFields?.name ?? null,
-    ticker: captureField(text, ["ticker", "symbol"]) ?? captureTickerToken(text) ?? simpleFields?.ticker ?? null,
+    name:
+      deployPlusFields?.name ??
+      captureField(text, ["name", "isim"]) ??
+      captureQuotedValueAfterCommand(text) ??
+      simpleFields?.name ??
+      null,
+    ticker:
+      deployPlusFields?.ticker ??
+      captureField(text, ["ticker", "symbol"]) ??
+      captureTickerToken(text) ??
+      simpleFields?.ticker ??
+      null,
     desc: captureField(text, ["desc", "description", "aciklama"]),
     website: captureField(text, ["website", "web"]),
     twitter: captureField(text, ["twitter", "x"]),
@@ -560,21 +612,35 @@ function parseLaunchCommand(text: string): LaunchCommand | null {
   const name = fields.name?.trim();
 
   if (!name || !ticker) {
-    return null;
+    if (lowered.includes("deploy")) {
+      return { command: null, error: "Use format: deploy NAME + TICKER" };
+    }
+    return { command: null, error: null };
   }
 
   const normalizedName = name.replace(/\s+/g, " ").trim();
   if (normalizedName.length < 2 || normalizedName.length > 48) {
-    return null;
+    return { command: null, error: "Use format: deploy NAME + TICKER" };
   }
 
+  if (!/^[A-Z0-9]{2,10}$/.test(ticker)) {
+    return { command: null, error: "Invalid ticker format. Use uppercase letters." };
+  }
+
+  console.log("Parsed deploy command:");
+  console.log("Name:", normalizedName);
+  console.log("Ticker:", ticker);
+
   return {
-    name: normalizedName,
-    shortName: ticker,
-    ...(fields.desc ? { desc: fields.desc.trim() } : {}),
-    ...(fields.website ? { webUrl: fields.website.trim() } : {}),
-    ...(fields.twitter ? { twitterUrl: fields.twitter.trim() } : {}),
-    ...(fields.telegram ? { telegramUrl: fields.telegram.trim() } : {}),
+    command: {
+      name: normalizedName,
+      shortName: ticker,
+      ...(fields.desc ? { desc: fields.desc.trim() } : {}),
+      ...(fields.website ? { webUrl: fields.website.trim() } : {}),
+      ...(fields.twitter ? { twitterUrl: fields.twitter.trim() } : {}),
+      ...(fields.telegram ? { telegramUrl: fields.telegram.trim() } : {}),
+    },
+    error: null,
   };
 }
 
@@ -613,6 +679,36 @@ function captureSimpleDeployFields(text: string) {
   const ticker = match[2].trim();
   if (!name || !ticker) {
     return null;
+  }
+
+  return { name, ticker };
+}
+
+function captureDeployPlusFields(text: string) {
+  const deployIndex = text.toLowerCase().indexOf("deploy");
+  if (deployIndex === -1) {
+    return null;
+  }
+
+  const afterDeploy = text.slice(deployIndex + "deploy".length).trim();
+  if (!afterDeploy) {
+    return { error: "Use format: deploy NAME + TICKER" };
+  }
+
+  if (!afterDeploy.includes("+")) {
+    return { error: "Use format: deploy NAME + TICKER" };
+  }
+
+  const [namePart, tickerPart] = afterDeploy.split("+", 2);
+  const name = sanitizeFieldValue(namePart || "").replace(/\s+/g, " ").trim();
+  const ticker = sanitizeFieldValue(tickerPart || "").replace(/\s+/g, " ").trim();
+
+  if (!name || name.length < 2) {
+    return { error: "Use format: deploy NAME + TICKER" };
+  }
+
+  if (!ticker) {
+    return { error: "Use format: deploy NAME + TICKER" };
   }
 
   return { name, ticker };
