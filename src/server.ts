@@ -11,6 +11,7 @@ import { fetchChartCandlesForTimeframe, lookupCa } from "./lib/ca-lookup.js";
 const PORT = Number(process.env.PORT || 3000);
 const PUBLIC_DIR = path.resolve("public");
 const RECENT_LIMIT = 8;
+const ADDRESS_RE = /^0x[a-fA-F0-9]{40}$/;
 
 type RecentSearch = {
   tokenAddress: string;
@@ -37,6 +38,12 @@ const server = createServer(async (req, res) => {
     }
 
     const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
+    const queryAddress = url.searchParams.get("ca")?.trim() || "";
+    if (url.pathname === "/" && ADDRESS_RE.test(queryAddress)) {
+      redirect(res, `/token/${queryAddress}`);
+      return;
+    }
+
     if (url.pathname === "/api/ca") {
       const address = url.searchParams.get("address")?.trim() || "";
       if (!address) {
@@ -128,12 +135,17 @@ server.listen(PORT, () => {
 });
 
 function resolvePublicPath(urlPath: string) {
-  const normalized = urlPath === "/" ? "/index.html" : urlPath;
+  const normalized = urlPath === "/" || urlPath.startsWith("/token/") ? "/index.html" : urlPath;
   const filePath = path.resolve(PUBLIC_DIR, `.${normalized}`);
   if (!filePath.startsWith(PUBLIC_DIR)) {
     throw new Error("Invalid path");
   }
   return filePath;
+}
+
+function redirect(res: ServerResponse, location: string) {
+  res.writeHead(302, { Location: location });
+  res.end();
 }
 
 function sendJson(res: ServerResponse, status: number, body: unknown) {

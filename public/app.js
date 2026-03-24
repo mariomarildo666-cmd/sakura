@@ -513,29 +513,33 @@ function initializeHomepage() {
   renderSkeleton();
   renderRecentSearches();
 
-  const initialAddress = extractAddress(new URL(window.location.href).searchParams.get("ca") || "");
-  if (initialAddress) {
-    input.value = initialAddress;
+  const initialRoute = getInitialAddressFromLocation();
+  if (initialRoute.kind === "valid") {
+    input.value = initialRoute.address;
     queueMicrotask(() => form.requestSubmit());
+    return;
+  }
+
+  if (initialRoute.kind === "invalid") {
+    status.textContent = "Invalid contract address.";
+    result.classList.add("hidden");
   }
 }
 
 function makeShareUrl(address) {
-  const url = new URL(window.location.href);
-  url.searchParams.set("ca", address);
-  return url.toString();
+  return `${window.location.origin}${buildTokenPath(address)}`;
 }
 
 function syncShareUrl(address) {
-  const url = new URL(window.location.href);
-  url.searchParams.set("ca", address);
-  window.history.replaceState({}, "", url);
+  const nextPath = buildTokenPath(address);
+  if (window.location.pathname === nextPath) return;
+  window.history.replaceState({}, "", nextPath);
 }
 
 function resetHomeView() {
-  const url = new URL(window.location.href);
-  url.searchParams.delete("ca");
-  window.history.replaceState({}, "", url);
+  if (window.location.pathname !== "/") {
+    window.history.replaceState({}, "", "/");
+  }
 
   input.value = "";
   status.textContent = "";
@@ -582,8 +586,8 @@ async function renderRecentSearches(options = {}) {
   historyClear?.classList.remove("hidden");
 
   for (const entry of recentEntries) {
-    const button = document.createElement("button");
-    button.type = "button";
+    const button = document.createElement("a");
+    button.href = buildTokenPath(entry.tokenAddress);
     button.className = "history-chip";
     const avatar = renderRecentAvatar(entry);
     button.innerHTML = `
@@ -594,8 +598,10 @@ async function renderRecentSearches(options = {}) {
         <span class="history-chip-address">${shortenAddress(entry.tokenAddress)}</span>
       </span>
     `;
-    button.addEventListener("click", () => {
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
       input.value = entry.tokenAddress;
+      syncShareUrl(entry.tokenAddress);
       form.requestSubmit();
     });
     historyList.appendChild(button);
@@ -619,6 +625,28 @@ function upsertRecentSearch(data) {
 function extractAddress(value) {
   const match = value.match(/0x[a-fA-F0-9]{40}/);
   return match ? match[0] : "";
+}
+
+function isValidAddress(value) {
+  return /^0x[a-fA-F0-9]{40}$/.test(String(value || "").trim());
+}
+
+function buildTokenPath(address) {
+  return `/token/${address}`;
+}
+
+function getInitialAddressFromLocation() {
+  const pathMatch = window.location.pathname.match(/^\/token\/(.+)$/);
+  if (!pathMatch) {
+    return { kind: "none" };
+  }
+
+  const candidate = String(pathMatch[1] || "").trim();
+  if (!isValidAddress(candidate)) {
+    return { kind: "invalid", address: candidate };
+  }
+
+  return { kind: "valid", address: candidate };
 }
 
 function shortenAddress(address) {
