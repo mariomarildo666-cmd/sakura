@@ -737,6 +737,14 @@ body:has(#result.hidden) .shell {
   color: var(--muted);
 }
 
+.history-chip,
+.history-chip-copy,
+.history-chip-name,
+.history-chip-symbol,
+.history-chip-address {
+  text-decoration: none;
+}
+
 .status {
   min-height: 24px;
   margin: 16px 8px 0 64px;
