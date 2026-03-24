@@ -237,19 +237,60 @@ async function renderSakura(address) {
 
 async function renderChart(data) {
   chartShell.classList.remove("hidden");
-  const embedTarget = data.dexScreener?.pairAddress || data.tokenAddress;
-  const embedUrl = `https://dexscreener.com/bsc/${embedTarget}?embed=1&theme=light&trades=0&info=0`;
-  chartLink.href = data.dexScreener?.url || `https://dexscreener.com/bsc/${embedTarget}`;
   chartLink.textContent = "Open Market";
   chartPrice.textContent = formatUsd(data.dexScreener?.priceUsd);
   chartMarketCap.textContent = formatCompactMoney(data.dexScreener?.marketCap);
   chartLiquidity.textContent = formatCompactMoney(data.dexScreener?.liquidityUsd);
   chartTimeframeChip.textContent = "TF: Live";
   setTimeframeButtonsDisabled(true);
-  setChartRibbonFromMarket(data);
   chartStatus.classList.add("hidden");
   chartStatus.textContent = "";
-  chartFrame.innerHTML = `<iframe class="chart-embed" src="${embedUrl}" title="DexScreener chart" loading="lazy" allowfullscreen></iframe>`;
+  chartFrame.innerHTML = "";
+
+  const pair = await resolveDexPairForChart(data);
+  if (!pair?.pairAddress) {
+    chartLink.removeAttribute("href");
+    setChartRibbonFromMarket(data, false);
+    chartStatus.textContent = "No liquidity pair yet.";
+    chartStatus.classList.remove("hidden");
+    return;
+  }
+
+  const embedUrl = `https://dexscreener.com/bsc/${pair.pairAddress}?embed=1&theme=light&trades=0&info=0`;
+  chartLink.href = pair.url || `https://dexscreener.com/bsc/${pair.pairAddress}`;
+  setChartRibbonFromMarket(
+    {
+      ...data,
+      dexScreener: {
+        ...data.dexScreener,
+        pairAddress: pair.pairAddress,
+      },
+    },
+    true,
+  );
+
+  const iframe = document.createElement("iframe");
+  iframe.className = "chart-embed";
+  iframe.src = embedUrl;
+  iframe.title = "DexScreener chart";
+  iframe.loading = "lazy";
+  iframe.allowFullscreen = true;
+
+  let loaded = false;
+  const timeoutId = window.setTimeout(() => {
+    if (loaded) return;
+    chartFrame.innerHTML = "";
+    chartStatus.textContent = "Pair not available yet.";
+    chartStatus.classList.remove("hidden");
+  }, 5000);
+
+  iframe.addEventListener("load", () => {
+    loaded = true;
+    window.clearTimeout(timeoutId);
+    chartStatus.classList.add("hidden");
+  });
+
+  chartFrame.appendChild(iframe);
 }
 
 function destroyChart() {
@@ -271,12 +312,37 @@ function resetChartMetrics() {
   chartCandleChip.textContent = "Candles: -";
 }
 
-function setChartRibbonFromMarket(data) {
+function setChartRibbonFromMarket(data, hasPair = Boolean(data.dexScreener?.pairAddress)) {
   const marketCap = Number(data.dexScreener?.marketCap || 0);
   const liquidity = Number(data.dexScreener?.liquidityUsd || 0);
-  const trend = marketCap > 0 && liquidity > 0 ? "Live Pair" : "Token Page";
+  const trend = hasPair && marketCap > 0 && liquidity > 0 ? "Live Pair" : "Token Page";
   chartTrendChip.textContent = `Trend: ${trend}`;
-  chartCandleChip.textContent = data.dexScreener?.pairAddress ? "Source: Pair" : "Source: Token";
+  chartCandleChip.textContent = hasPair ? "Source: Pair" : "Source: Token";
+}
+
+async function resolveDexPairForChart(data) {
+  if (data.dexScreener?.pairAddress) {
+    return {
+      pairAddress: data.dexScreener.pairAddress,
+      url: data.dexScreener.url || null,
+    };
+  }
+
+  try {
+    const response = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${encodeURIComponent(data.tokenAddress)}`);
+    const payload = await response.json();
+    const pair = Array.isArray(payload?.pairs) ? payload.pairs[0] : null;
+    if (!response.ok || !pair?.pairAddress) {
+      return null;
+    }
+
+    return {
+      pairAddress: pair.pairAddress,
+      url: pair.url || null,
+    };
+  } catch {
+    return null;
+  }
 }
 
 function createMarketStat(label, value) {
