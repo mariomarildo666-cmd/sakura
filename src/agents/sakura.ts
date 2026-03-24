@@ -45,12 +45,17 @@ type SakuraEvidenceContext = {
   hasMaxRaisedBnb: boolean;
   hasTradingFeeRate: boolean;
   liquidityAdded: boolean;
+  hasVolume24h: boolean;
+  hasPriceChange24h: boolean;
+  hasBuys24h: boolean;
+  hasSells24h: boolean;
+  hasPairAge: boolean;
   hasCreatorHistory: false;
-  hasHolderData: false;
-  hasWalletDistribution: false;
-  hasSocialMetrics: false;
+  hasHolderData: boolean;
+  hasWalletDistribution: boolean;
+  hasSocialMetrics: boolean;
   hasNarrativeMetrics: false;
-  hasAttentionMetrics: false;
+  hasAttentionMetrics: boolean;
 };
 
 export type SakuraResult = ParsedSakuraPayload & {
@@ -394,6 +399,90 @@ async function requestHuggingFaceAnalysis(
   heuristic: SakuraResult,
   evidence: SakuraEvidenceContext,
 ): Promise<ParsedSakuraPayload | null> {
+  const modelInput = {
+    tokenAddress: lookup.tokenAddress,
+    name: lookup.summary.name,
+    symbol: lookup.summary.symbol,
+    creator: lookup.summary.creator,
+    website: lookup.summary.website,
+    twitter: lookup.summary.twitter,
+    telegram: lookup.summary.telegram,
+    aiCreator: lookup.summary.aiCreator,
+    liquidityAdded: lookup.summary.liquidityAdded,
+    raisedBnb: lookup.summary.raisedBnb,
+    maxRaisedBnb: lookup.summary.maxRaisedBnb,
+    launchTime: lookup.summary.launchTime,
+    contractAgeMinutes: lookup.summary.contractAgeMinutes,
+    tokenAgeMinutes: lookup.summary.tokenAgeMinutes,
+    tradingFeeRate: lookup.summary.tradingFeeRate,
+    hasWebsite: lookup.summary.hasWebsite,
+    hasTwitter: lookup.summary.hasTwitter,
+    hasTelegram: lookup.summary.hasTelegram,
+    priceUsd: lookup.dexScreener?.priceUsd,
+    liquidityUsd: lookup.dexScreener?.liquidityUsd,
+    marketCap: lookup.dexScreener?.marketCap,
+    fdv: lookup.dexScreener?.fdv,
+    volume24hUsd: lookup.dexScreener?.volume24hUsd,
+    priceChange24h: lookup.dexScreener?.priceChange24h,
+    buys24h: lookup.dexScreener?.buys24h,
+    sells24h: lookup.dexScreener?.sells24h,
+    pairAgeMinutes: lookup.dexScreener?.pairAgeMinutes,
+    totalHolders: lookup.holders?.totalHolders,
+    topHolderPercent: lookup.holders?.topHolderPercent,
+    distributionConcentration: lookup.holders?.distributionConcentration,
+    heuristicReference: {
+      verdict: heuristic.verdict,
+      scores: heuristic.scores,
+      overallScore: heuristic.overallScore,
+      classification:
+        heuristic.overallScore >= 7
+          ? "tradable"
+          : heuristic.scores.exitLiquidityRisk >= 7
+            ? "exit-liquidity risk"
+            : heuristic.scores.tradeability <= 4
+              ? "watchlist"
+              : "mixed",
+    },
+    availableSignals: {
+      tokenName: evidence.hasName,
+      ticker: evidence.hasSymbol,
+      creatorAddress: evidence.hasCreatorAddress,
+      websiteLink: evidence.hasWebsite,
+      twitterLink: evidence.hasTwitter,
+      telegramLink: evidence.hasTelegram,
+      socialLinkCount: evidence.socialLinkCount,
+      priceUsd: evidence.hasPrice,
+      liquidityUsd: evidence.hasLiquidity,
+      marketCap: evidence.hasMarketCap,
+      fdv: evidence.hasFdv,
+      pairData: evidence.hasPair,
+      launchTime: evidence.hasLaunchTime,
+      contractAgeMinutes: lookup.summary.contractAgeMinutes,
+      tokenAgeMinutes: lookup.summary.tokenAgeMinutes,
+      raisedBnb: evidence.hasRaisedBnb,
+      maxRaisedBnb: evidence.hasMaxRaisedBnb,
+      tradingFeeRate: evidence.hasTradingFeeRate,
+      liquidityAdded: evidence.liquidityAdded,
+      volume24h: evidence.hasVolume24h,
+      priceChange24h: evidence.hasPriceChange24h,
+      buys24h: evidence.hasBuys24h,
+      sells24h: evidence.hasSells24h,
+      pairAge: evidence.hasPairAge,
+      holderCount: evidence.hasHolderData,
+      topHolderPercent: lookup.holders?.topHolderPercent,
+      distributionConcentration: lookup.holders?.distributionConcentration,
+    },
+    missingSignals: [
+      "creator history",
+      ...(evidence.hasHolderData ? [] : ["holder distribution", "wallet quality"]),
+      ...(evidence.hasSocialMetrics ? [] : ["verified social metrics"]),
+      ...(evidence.hasAttentionMetrics ? [] : ["attention flow metrics"]),
+      "narrative metrics",
+    ],
+  };
+
+  console.log("SAKURA INPUT:", JSON.stringify(modelInput, null, 2));
+
   const response = await fetch("https://router.huggingface.co/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -407,65 +496,7 @@ async function requestHuggingFaceAnalysis(
         { role: "system", content: SAKURA_SYSTEM_PROMPT },
         {
           role: "user",
-          content: JSON.stringify({
-            tokenAddress: lookup.tokenAddress,
-            name: lookup.summary.name,
-            symbol: lookup.summary.symbol,
-            creator: lookup.summary.creator,
-            website: lookup.summary.website,
-            twitter: lookup.summary.twitter,
-            telegram: lookup.summary.telegram,
-            aiCreator: lookup.summary.aiCreator,
-            liquidityAdded: lookup.summary.liquidityAdded,
-            raisedBnb: lookup.summary.raisedBnb,
-            maxRaisedBnb: lookup.summary.maxRaisedBnb,
-            launchTime: lookup.summary.launchTime,
-            tradingFeeRate: lookup.summary.tradingFeeRate,
-            priceUsd: lookup.dexScreener?.priceUsd,
-            liquidityUsd: lookup.dexScreener?.liquidityUsd,
-            marketCap: lookup.dexScreener?.marketCap,
-            fdv: lookup.dexScreener?.fdv,
-            heuristicReference: {
-              verdict: heuristic.verdict,
-              scores: heuristic.scores,
-              overallScore: heuristic.overallScore,
-              classification:
-                heuristic.overallScore >= 7
-                  ? "tradable"
-                  : heuristic.scores.exitLiquidityRisk >= 7
-                    ? "exit-liquidity risk"
-                    : heuristic.scores.tradeability <= 4
-                      ? "watchlist"
-                      : "mixed",
-            },
-            availableSignals: {
-              tokenName: evidence.hasName,
-              ticker: evidence.hasSymbol,
-              creatorAddress: evidence.hasCreatorAddress,
-              websiteLink: evidence.hasWebsite,
-              twitterLink: evidence.hasTwitter,
-              telegramLink: evidence.hasTelegram,
-              socialLinkCount: evidence.socialLinkCount,
-              priceUsd: evidence.hasPrice,
-              liquidityUsd: evidence.hasLiquidity,
-              marketCap: evidence.hasMarketCap,
-              fdv: evidence.hasFdv,
-              pairData: evidence.hasPair,
-              launchTime: evidence.hasLaunchTime,
-              raisedBnb: evidence.hasRaisedBnb,
-              maxRaisedBnb: evidence.hasMaxRaisedBnb,
-              tradingFeeRate: evidence.hasTradingFeeRate,
-              liquidityAdded: evidence.liquidityAdded,
-            },
-            missingSignals: [
-              "creator history",
-              "holder distribution",
-              "wallet quality",
-              "verified social metrics",
-              "attention flow metrics",
-              "narrative metrics",
-            ],
-          }),
+          content: JSON.stringify(modelInput),
         },
       ],
       temperature: 0.68,
@@ -663,6 +694,12 @@ function scoreLookup(lookup: Awaited<ReturnType<typeof lookupCa>>): SakuraScores
   const marketCap = Number(lookup.dexScreener?.marketCap || 0);
   const liquidity = Number(lookup.dexScreener?.liquidityUsd || 0);
   const price = Number(lookup.dexScreener?.priceUsd || 0);
+  const volume24h = Number(lookup.dexScreener?.volume24hUsd || 0);
+  const priceChange24h = Number(lookup.dexScreener?.priceChange24h || 0);
+  const buys24h = Number(lookup.dexScreener?.buys24h || 0);
+  const sells24h = Number(lookup.dexScreener?.sells24h || 0);
+  const totalHolders = Number(lookup.holders?.totalHolders || 0);
+  const topHolderPercent = Number(lookup.holders?.topHolderPercent || 0);
   const tradingFeeRate = Number(lookup.summary.tradingFeeRate || 0);
   const raisedBnb = Number(lookup.summary.raisedBnb || 0);
   const maxRaisedBnb = Number(lookup.summary.maxRaisedBnb || 0);
@@ -689,6 +726,8 @@ function scoreLookup(lookup: Awaited<ReturnType<typeof lookupCa>>): SakuraScores
   if (price > 0) tradeability += 1;
   if (socialCount >= 2) tradeability += 1;
   if (liquidityAdded) tradeability += 1;
+  if (volume24h >= 5000) tradeability += 1;
+  if (buys24h > 0 && sells24h > 0) tradeability += 1;
 
   let exitLiquidityRisk = 5;
   if (!liquidityAdded) exitLiquidityRisk += 2;
@@ -697,12 +736,15 @@ function scoreLookup(lookup: Awaited<ReturnType<typeof lookupCa>>): SakuraScores
   if (socialCount === 0) exitLiquidityRisk += 1;
   if (tradingFeeRate > 0.03) exitLiquidityRisk += 1;
   if (socialCount >= 2 && liquidity >= 10000) exitLiquidityRisk -= 2;
+  if (topHolderPercent >= 25) exitLiquidityRisk += 1;
 
   let rotationPotential = 2;
   if (socialCount >= 2) rotationPotential += 2;
   if (memeHits >= 1) rotationPotential += 2;
   if (marketCap >= 30000 && marketCap <= 4000000) rotationPotential += 2;
   if (liquidity >= 10000) rotationPotential += 1;
+  if (volume24h >= 10000 || Math.abs(priceChange24h) >= 8) rotationPotential += 1;
+  if (totalHolders >= 100) rotationPotential += 1;
 
   return {
     launchQuality: clampScore(launchQuality),
@@ -722,6 +764,9 @@ function buildTraderRead(
   const socialCount = [lookup.summary.website, lookup.summary.twitter, lookup.summary.telegram].filter(Boolean).length;
   const liquidity = Number(lookup.dexScreener?.liquidityUsd || 0);
   const marketCap = Number(lookup.dexScreener?.marketCap || 0);
+  const volume24h = Number(lookup.dexScreener?.volume24hUsd || 0);
+  const buys24h = Number(lookup.dexScreener?.buys24h || 0);
+  const sells24h = Number(lookup.dexScreener?.sells24h || 0);
 
   const bullishOpeners = [
     "There is enough going on here to keep traders interested, and the tape is not completely fake.",
@@ -737,7 +782,12 @@ function buildTraderRead(
   const socialReads = [
     "Public links are present, but social quality is still unverified.",
     "There are social links to check, though real backing is still unclear from this input.",
-    "There is at least a surface social footprint, but not enough data to call it strong.",
+    "There is at least a visible social shell, but no verified engagement data yet.",
+  ];
+  const momentumReads = [
+    "Volume is active enough that this can stay tradeable if the tape does not stall.",
+    "Recent flow is visible on the tape, which matters more than the story right now.",
+    "There is enough turnover here that the move is not fully dead money yet.",
   ];
   const stretchedReads = [
     "The ratio already looks stretched, which is where late buyers usually get punished.",
@@ -752,7 +802,9 @@ function buildTraderRead(
 
   const first = verdict === "bullish" ? pickVariant(bullishOpeners, seed) : pickVariant(bearishOpeners, seed);
   const second =
-    socialCount >= 2
+    volume24h >= 5000 && (buys24h > 0 || sells24h > 0)
+      ? pickVariant(momentumReads, seed + 1)
+      : socialCount >= 2
       ? pickVariant(socialReads, seed + 1)
       : liquidity > 0 && marketCap > 0 && marketCap / Math.max(liquidity, 1) > 18
         ? pickVariant(stretchedReads, seed + 2)
@@ -1262,12 +1314,20 @@ function buildEvidenceContext(lookup: Awaited<ReturnType<typeof lookupCa>>): Sak
     hasMaxRaisedBnb: Number(lookup.summary.maxRaisedBnb || 0) > 0,
     hasTradingFeeRate: Number(lookup.summary.tradingFeeRate || 0) >= 0,
     liquidityAdded: Boolean(lookup.summary.liquidityAdded),
+    hasVolume24h: Number(lookup.dexScreener?.volume24hUsd || 0) > 0,
+    hasPriceChange24h: Number(lookup.dexScreener?.priceChange24h || 0) !== 0,
+    hasBuys24h: Number(lookup.dexScreener?.buys24h || 0) > 0,
+    hasSells24h: Number(lookup.dexScreener?.sells24h || 0) > 0,
+    hasPairAge: Number(lookup.dexScreener?.pairAgeMinutes || 0) > 0,
     hasCreatorHistory: false,
-    hasHolderData: false,
-    hasWalletDistribution: false,
+    hasHolderData: Number(lookup.holders?.totalHolders || 0) > 0,
+    hasWalletDistribution: Number(lookup.holders?.topHolderPercent || 0) > 0,
     hasSocialMetrics: false,
     hasNarrativeMetrics: false,
-    hasAttentionMetrics: false,
+    hasAttentionMetrics:
+      Number(lookup.dexScreener?.volume24hUsd || 0) > 0 ||
+      Number(lookup.dexScreener?.buys24h || 0) > 0 ||
+      Number(lookup.dexScreener?.sells24h || 0) > 0,
   };
 }
 

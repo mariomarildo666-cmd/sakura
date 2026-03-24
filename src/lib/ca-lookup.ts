@@ -19,6 +19,7 @@ type DexPair = {
   dexId?: string;
   url?: string;
   pairAddress?: string;
+  pairCreatedAt?: number | null;
   info?: {
     websites?: Array<{
       label?: string | null;
@@ -29,12 +30,34 @@ type DexPair = {
       url?: string | null;
     }> | null;
   } | null;
+  txns?: {
+    h24?: {
+      buys?: number;
+      sells?: number;
+    } | null;
+  } | null;
+  volume?: {
+    h24?: number;
+  } | null;
+  priceChange?: {
+    h24?: number;
+  } | null;
   liquidity?: {
     usd?: number;
   } | null;
   priceUsd?: string | null;
   marketCap?: number | null;
   fdv?: number | null;
+};
+
+type HolderSecurityRecord = {
+  holder_count?: string | number | null;
+  holders?: Array<{
+    address?: string | null;
+    percent?: string | number | null;
+    is_locked?: string | number | boolean | null;
+    is_contract?: string | number | boolean | null;
+  }> | null;
 };
 
 export type ChartCandle = {
@@ -79,6 +102,10 @@ export async function lookupCa(rawInput: string, rpcUrl?: string) {
   ] = chain;
 
   const bestDexPair = pickBestDexPair(dexScreenerPairs);
+  const holderSignals = await fetchHolderSignals(tokenAddress);
+  const launchTimestampMs = Number(launchTime) > 0 ? Number(launchTime) * 1000 : null;
+  const pairAgeMinutes = getPairAgeMinutes(bestDexPair?.pairCreatedAt);
+  const contractAgeMinutes = launchTimestampMs ? Math.max(0, Math.round((Date.now() - launchTimestampMs) / 60000)) : null;
 
   return {
     input: rawInput,
@@ -97,9 +124,14 @@ export async function lookupCa(rawInput: string, rpcUrl?: string) {
       raisedBnb: formatEther(funds),
       maxRaisedBnb: formatEther(maxFunds),
       launchTime: new Date(Number(launchTime) * 1000).toISOString(),
+      contractAgeMinutes,
+      tokenAgeMinutes: contractAgeMinutes,
       tradingFeeRate: Number(tradingFeeRate) / 10000,
       tokenManager,
       version: Number(version),
+      hasWebsite: Boolean(firstString(rest.data, ["webUrl"]) || getDexWebsite(bestDexPair)),
+      hasTwitter: Boolean(firstString(rest.data, ["twitterUrl"]) || getDexSocial(bestDexPair, "twitter")),
+      hasTelegram: Boolean(firstString(rest.data, ["telegramUrl"]) || getDexSocial(bestDexPair, "telegram")),
     },
     dexScreener: bestDexPair
       ? {
@@ -110,8 +142,15 @@ export async function lookupCa(rawInput: string, rpcUrl?: string) {
           liquidityUsd: bestDexPair.liquidity?.usd ?? null,
           marketCap: bestDexPair.marketCap ?? null,
           fdv: bestDexPair.fdv ?? null,
+          volume24hUsd: bestDexPair.volume?.h24 ?? null,
+          priceChange24h: bestDexPair.priceChange?.h24 ?? null,
+          buys24h: bestDexPair.txns?.h24?.buys ?? null,
+          sells24h: bestDexPair.txns?.h24?.sells ?? null,
+          pairCreatedAt: bestDexPair.pairCreatedAt ?? null,
+          pairAgeMinutes,
         }
       : null,
+    holders: holderSignals,
     rest,
     chain: {
       version: version.toString(),
@@ -213,7 +252,13 @@ async function fetchDexScreenerPairs(tokenAddress: `0x${string}`) {
 
 function pickBestDexPair(pairs: DexPair[]) {
   if (pairs.length === 0) return null;
-  return [...pairs].sort((a, b) => (Number(b.liquidity?.usd || 0) - Number(a.liquidity?.usd || 0)))[0] || null;
+  return (
+    [...pairs].sort((a, b) => {
+      const liquidityDelta = Number(b.liquidity?.usd || 0) - Number(a.liquidity?.usd || 0);
+      if (liquidityDelta !== 0) return liquidityDelta;
+      return Number(b.volume?.h24 || 0) - Number(a.volume?.h24 || 0);
+    })[0] || null
+  );
 }
 
 async function fetchDexPairsFromUrl(url: string) {
@@ -318,4 +363,62 @@ function getDexSocial(pair: DexPair | null, type: string) {
   }
 
   return null;
+}
+
+async function fetchHolderSignals(tokenAddress: `0x${string}`) {
+  try {
+    const response = await fetch(
+      `https://api.gopluslabs.io/api/v1/token_security/56?contract_addresses=${encodeURIComponent(tokenAddress)}`,
+      { headers: { Accept: "application/json" } },
+    );
+    if (!response.ok) {
+      return emptyHolderSignals();
+    }
+
+    const json = (await response.json()) as {
+      result?: Record<string, HolderSecurityRecord | null> | null;
+    } | null;
+
+    const record = json?.result?.[tokenAddress.toLowerCase()] || json?.result?.[tokenAddress] || null;
+    if (!record) {
+      return emptyHolderSignals();
+    }
+
+    const holders = Array.isArray(record.holders) ? record.holders : [];
+    const percents = holders
+      .map((holder) => Number(holder?.percent || 0))
+      .filter((value) => Number.isFinite(value) && value > 0);
+
+    const topHolderPercent = percents.length ? Math.max(...percents) : null;
+    const topTenPercent = percents
+      .sort((left, right) => right - left)
+      .slice(0, 10)
+      .reduce((sum, value) => sum + value, 0);
+
+    return {
+      totalHolders: toNullableNumber(record.holder_count),
+      topHolderPercent,
+      distributionConcentration: topTenPercent || null,
+    };
+  } catch {
+    return emptyHolderSignals();
+  }
+}
+
+function emptyHolderSignals() {
+  return {
+    totalHolders: null,
+    topHolderPercent: null,
+    distributionConcentration: null,
+  };
+}
+
+function toNullableNumber(value: unknown) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function getPairAgeMinutes(pairCreatedAt?: number | null) {
+  if (!pairCreatedAt || !Number.isFinite(pairCreatedAt)) return null;
+  return Math.max(0, Math.round((Date.now() - Number(pairCreatedAt)) / 60000));
 }
