@@ -164,18 +164,21 @@ TONE RULES
 Write like a seasoned trader.
 
 Use:
-- short sentences
-- tight paragraphs
-- punchy wording
+- concise but natural trader phrasing
+- situational language
 - realistic skepticism
+- sentence rhythm that fits the setup
 
-Allowed style examples:
-"Enough attention here to move, but structure still looks fragile."
-"This feels crowded already. I'd stalk, not chase."
-"Decent meme, weak wallet structure."
-"This runs if attention sticks. Dies fast if it fades."
+You may use:
+- short sentences when the read is obvious
+- slightly longer sentences when context needs nuance
+- tighter or looser cadence depending on evidence richness
 
 Avoid:
+- robotic compression
+- sounding like a phrase engine
+- realistic skepticism
+
 - emoji spam
 - excessive slang
 - cringe hype language
@@ -187,19 +190,16 @@ PRESENTATION RULES
 - Token names may be non-English. Keep them exactly as they are if mentioned.
 - Commentary itself must remain clean English.
 - Treat token name as metadata, not as the first sentence of the read.
-- TRADER READ must be maximum 2 short paragraphs.
+- TRADER READ may be 1 or 2 short paragraphs depending on evidence richness.
 - Each TRADER READ paragraph must make a distinct point.
 - Do not repeat the same idea across TRADER READ, BULL CASE, and BEAR CASE.
+- BULL CASE and BEAR CASE may contain 1 to 3 points each depending on evidence richness.
 - If verdict is bearish or tradeability is weak, keep the bull case modest.
 - Avoid weak filler like:
   - "may exist"
   - "at least present"
   - "data is incomplete"
-- Prefer stronger trader phrasing like:
-  - "enough attention to matter"
-  - "not enough structure to trust"
-  - "watchlist material, not chase material"
-  - "late buyers can get farmed here"
+- Missing-data disclaimers should appear at most once per category per output.
 
 VARIATION RULES
 
@@ -215,14 +215,10 @@ STYLE RULES
 
 - Write like a trader making live notes.
 - Use fresh wording.
-- Keep it concise, but not robotic.
+- Keep it concise, but not robotic or over-compressed.
 - Avoid canned phrasing unless the setup truly demands it.
-- Avoid stock lines like:
-  - "social backing is thin"
-  - "liquidity still looks weak"
-  - "exit risk is elevated"
-  - "enough attention to matter"
-  unless those exact words feel necessary.
+- Let similar setups still sound different from each other.
+- Favor natural paraphrase over repeated stock wording.
 
 OUTPUT STRUCTURE (MANDATORY)
 
@@ -643,9 +639,9 @@ function sanitizeParsedPayload(value: {
   const verdict = normalizeVerdict(value.verdict);
   const scores = normalizeScores(value.scores);
   const verdictLine = cleanSentence(value.verdictLine) || deriveVerdictLine(verdict, scores);
-  const traderRead = toCleanList(value.traderRead, 2, ["There is interest here, but the structure still needs proof."]);
-  const bullCase = toCleanList(value.bullCase, 2, ["There is enough here to keep it on the watchlist."]);
-  const bearCase = toCleanList(value.bearCase, 2, ["Late buyers are the first thing at risk if this slips."]);
+  const traderRead = toCleanList(value.traderRead, 1, ["There is interest here, but the structure still needs proof."]);
+  const bullCase = toCleanList(value.bullCase, 1, ["There is enough here to keep it on the watchlist."]);
+  const bearCase = toCleanList(value.bearCase, 1, ["Late buyers are the first thing at risk if this slips."]);
   const finalLine = cleanSentence(value.finalLine) || deriveFinalLine(verdict, scores);
 
   return postProcessPayload({ verdict, verdictLine, traderRead, bullCase, bearCase, scores, finalLine });
@@ -662,8 +658,8 @@ function sanitizeLegacyPayload(value: {
   const scores = normalizeLegacyScores(value.scorecard);
   const verdictLine = deriveVerdictLine(verdict, scores, cleanSentence(value.summary));
   const traderRead = splitLegacySummary(cleanSentence(value.summary));
-  const bullCase = toCleanList(value.reasons, 2, ["There is enough attention here to stay on radar."]);
-  const bearCase = toCleanList(value.cautions, 2, ["The structure still looks fragile if buyers pile in."]);
+  const bullCase = toCleanList(value.reasons, 1, ["There is enough attention here to stay on radar."]);
+  const bearCase = toCleanList(value.cautions, 1, ["The structure still looks fragile if buyers pile in."]);
   const finalLine = deriveFinalLine(verdict, scores);
 
   return postProcessPayload({ verdict, verdictLine, traderRead, bullCase, bearCase, scores, finalLine });
@@ -1114,13 +1110,17 @@ function postProcessPayload(
   const finalLine = sentenceNeedsEvidenceDowngrade(rawFinalLine, evidence)
     ? deriveFinalLine(payload.verdict, payload.scores, seed)
     : tightenFinalLine(rawFinalLine, payload.verdict, payload.scores, seed);
+  const uncertaintyRegistry = new Set<string>();
+  const cleanedTraderRead = compressUncertaintyLines(traderRead, uncertaintyRegistry);
+  const cleanedBullCase = compressUncertaintyLines(bullCase, uncertaintyRegistry);
+  const cleanedBearCase = compressUncertaintyLines(bearCase, uncertaintyRegistry);
 
   return {
     ...payload,
     verdictLine,
-    traderRead: traderRead.length ? traderRead : [pickVariant(["There is interest here, but the structure still needs proof.", "Enough here to watch, not enough here to trust yet."], seed)],
-    bullCase: bullCase.length ? bullCase : [pickVariant(["There is enough here to keep it on the watchlist.", "There is still a reason to keep this on radar."], seed + 1)],
-    bearCase: bearCase.length ? bearCase : [pickVariant(["Late buyers are the first thing at risk if this slips.", "If this loses momentum, the last buyers get punished first."], seed + 2)],
+    traderRead: cleanedTraderRead.length ? cleanedTraderRead : [pickVariant(["There is interest here, but the structure still needs proof.", "Enough here to watch, not enough here to trust yet."], seed)],
+    bullCase: cleanedBullCase.length ? cleanedBullCase : [pickVariant(["There is enough here to keep it on the watchlist.", "There is still a reason to keep this on radar."], seed + 1)],
+    bearCase: cleanedBearCase.length ? cleanedBearCase : [pickVariant(["Late buyers are the first thing at risk if this slips.", "If this loses momentum, the last buyers get punished first."], seed + 2)],
     finalLine,
   };
 }
@@ -1185,6 +1185,34 @@ function dedupeLines(lines: string[], seed: number, limit: number): string[] {
     if (output.length >= limit) break;
   }
   return output;
+}
+
+function compressUncertaintyLines(lines: string[], registry: Set<string>): string[] {
+  const output: string[] = [];
+
+  for (const line of lines) {
+    const category = classifyUncertainty(line);
+    if (category && registry.has(category)) {
+      continue;
+    }
+    if (category) {
+      registry.add(category);
+    }
+    output.push(line);
+  }
+
+  return output;
+}
+
+function classifyUncertainty(value: string): string | null {
+  const lowered = value.toLowerCase();
+  if (/\bcreator quality is unverified\b|\bcreator history is missing\b/.test(lowered)) return "creator";
+  if (/\bholder quality is unknown\b|\bno verified holder data yet\b/.test(lowered)) return "holders";
+  if (/\bsocial quality is still unverified\b|\bsocial strength is unclear\b/.test(lowered)) return "social";
+  if (/\bnarrative strength is still unclear\b/.test(lowered)) return "narrative";
+  if (/\battention quality is unverified\b/.test(lowered)) return "attention";
+  if (/\bliquidity quality is unclear\b/.test(lowered)) return "liquidity";
+  return null;
 }
 
 function normalizeIdeaKey(value: string): string {
