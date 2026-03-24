@@ -524,6 +524,7 @@ async function fetchHolderSignals(tokenAddress: `0x${string}`) {
 
     const topHolderPercentRaw = rawHolders.length ? Number(rawHolders[0].percent || 0) : null;
     const topHolderPercentFiltered = filteredHolders.length ? Number(filteredHolders[0].percent || 0) : null;
+    const topHolderRaw = rawHolders[0] || null;
     const rawTopHolders = rawHolders.slice(0, 10).map(minifyHolder);
     const topHoldersFiltered = filteredHolders.slice(0, 10).map(minifyHolder);
     const distributionConcentration = filteredHolders.slice(0, 10).reduce((sum, holder) => sum + Number(holder.percent || 0), 0);
@@ -534,6 +535,8 @@ async function fetchHolderSignals(tokenAddress: `0x${string}`) {
       topHolderPercent: topHolderPercentFiltered,
       topHolderPercentRaw,
       topHolderPercentFiltered,
+      topHolderAddressRaw: topHolderRaw?.address || null,
+      topHolderClassificationRaw: topHolderRaw?.classification || null,
       distributionConcentration: distributionConcentration || null,
       circulatingHolderConcentration: distributionConcentration || null,
       top3PercentFiltered: top3PercentFiltered || null,
@@ -553,6 +556,8 @@ function emptyHolderSignals() {
     topHolderPercent: null,
     topHolderPercentRaw: null,
     topHolderPercentFiltered: null,
+    topHolderAddressRaw: null,
+    topHolderClassificationRaw: null,
     distributionConcentration: null,
     circulatingHolderConcentration: null,
     top3PercentFiltered: null,

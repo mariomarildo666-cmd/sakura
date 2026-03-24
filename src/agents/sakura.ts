@@ -438,6 +438,8 @@ async function requestHuggingFaceAnalysis(
     topHolderPercent: lookup.holders?.topHolderPercentFiltered,
     topHolderPercentRaw: lookup.holders?.topHolderPercentRaw,
     topHolderPercentFiltered: lookup.holders?.topHolderPercentFiltered,
+    topHolderAddressRaw: lookup.holders?.topHolderAddressRaw,
+    topHolderClassificationRaw: lookup.holders?.topHolderClassificationRaw,
     distributionConcentration: lookup.holders?.distributionConcentration,
     circulatingHolderConcentration: lookup.holders?.circulatingHolderConcentration,
     top3PercentFiltered: lookup.holders?.top3PercentFiltered,
@@ -485,6 +487,8 @@ async function requestHuggingFaceAnalysis(
       sells24h: evidence.hasSells24h,
       pairAge: evidence.hasPairAge,
       holderCount: evidence.hasHolderData,
+      topHolderAddressRaw: lookup.holders?.topHolderAddressRaw,
+      topHolderClassificationRaw: lookup.holders?.topHolderClassificationRaw,
       topHolderPercentRaw: lookup.holders?.topHolderPercentRaw,
       topHolderPercentFiltered: lookup.holders?.topHolderPercentFiltered,
       distributionConcentration: lookup.holders?.distributionConcentration,
@@ -509,6 +513,8 @@ async function requestHuggingFaceAnalysis(
 
   console.log("SAKURA INPUT:", JSON.stringify(modelInput, null, 2));
   console.log("HOLDER ANALYSIS", {
+    topHolderAddress: lookup.holders?.topHolderAddressRaw,
+    classification: lookup.holders?.topHolderClassificationRaw,
     rawTopHolderPercent: lookup.holders?.topHolderPercentRaw,
     filteredTopHolderPercent: lookup.holders?.topHolderPercentFiltered,
     lpDetected: lookup.holders?.lpHolderDetected,
