@@ -87,6 +87,11 @@ Fill `.env` with what you need:
 - `X_API_SECRET`
 - `X_ACCESS_TOKEN`
 - `X_ACCESS_TOKEN_SECRET`
+- `X_BOT_DRY_RUN`
+- `X_BOT_POLL_SECONDS`
+- optional: `X_BOT_USER_ID`
+- optional: `X_BOT_MAX_RESULTS`
+- optional: `X_BOT_STATE_PATH`
 - optional: `X_BOT_LAUNCH_CONFIG` default is `token.json`
 
 `token.json` is ignored locally so live launch configs stay private.
@@ -162,20 +167,71 @@ docker compose up --build
 
 ## Deploy
 
-Best simple target:
+This app has two runtime roles in production:
 
-- Render Web Service
+- Web Service: UI + API routes
+- X Bot Worker: mention polling loop
 
-Suggested settings:
+They should run as separate services. The X bot should not rely on the web service process staying alive.
+
+### Deploy Web Service
+
+Use this for the website and API:
 
 - Build Command: `npm install`
 - Start Command: `npm start`
 
-Useful environment variables:
+Required environment:
 
 - `BSC_RPC_URL`
 - `HF_API_KEY`
 - optional: `HF_MODEL`
+
+### Deploy X Bot
+
+Run the X mention poller as a separate background worker/service:
+
+- Build Command: `npm install`
+- Start Command: `npm run x-bot -- poll`
+
+Required environment:
+
+- `PRIVATE_KEY`
+- `BSC_RPC_URL`
+- `HF_API_KEY`
+- optional: `HF_MODEL`
+- `X_BOT_USERNAME`
+- `X_BEARER_TOKEN`
+- `X_API_KEY`
+- `X_API_SECRET`
+- `X_ACCESS_TOKEN`
+- `X_ACCESS_TOKEN_SECRET`
+- `X_BOT_DRY_RUN`
+- `X_BOT_POLL_SECONDS`
+- optional: `X_BOT_USER_ID`
+- optional: `X_BOT_MAX_RESULTS`
+- optional: `X_BOT_STATE_PATH`
+- optional: `X_BOT_LAUNCH_CONFIG`
+
+Important:
+
+- if `X_BOT_DRY_RUN` is not explicitly set to `false`, the bot will not post live replies
+- the same rule applies to live Four.meme launches triggered from X mentions
+
+Production note:
+
+- mention state is currently stored in `.data/x-bot-state.json`
+- this is not durable on ephemeral platforms or across redeploys/restarts
+- TODO: move bot state to persistent storage for production use
+
+### Example Render Setup
+
+- Web Service
+  - Build Command: `npm install`
+  - Start Command: `npm start`
+- Background Worker
+  - Build Command: `npm install`
+  - Start Command: `npm run x-bot -- poll`
 
 ## Repo Map
 
