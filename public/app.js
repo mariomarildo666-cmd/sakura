@@ -162,7 +162,7 @@ async function renderSakura(address) {
   sakuraVerdict.className = "sakura-verdict";
   sakuraVerdict.textContent = "...";
   setSakuraFigure("neutral");
-  sakuraSummary.textContent = "Sakura is scanning the move and checking if this thing has real meme juice or just pretty packaging.";
+  renderSakuraSummary("Sakura is scanning the move and checking if this thing has real meme juice or just pretty packaging.");
   fillSakuraList(sakuraReasons, [], "No ape angle yet.");
   fillSakuraList(sakuraCautions, [], "No fade angle yet.");
 
@@ -182,13 +182,13 @@ async function renderSakura(address) {
     sakuraVerdict.textContent = `${calculateTotalScore(analysis.scorecard)}/10`;
     sakuraVerdict.classList.add(analysis.verdict === "bullish" ? "is-bullish" : "is-bearish");
     setSakuraFigure(analysis.verdict === "bullish" ? "bullish" : "bearish");
-    sakuraSummary.textContent = buildMergedSakuraComment(agent.answer || analysis.summary, analysis.reasons, analysis.cautions);
+    renderSakuraSummary(buildMergedSakuraComment(agent.answer || analysis.summary, analysis.reasons, analysis.cautions));
     fillSakuraList(sakuraReasons, analysis.reasons, "Sakura is not seeing a clean ape case.");
     fillSakuraList(sakuraCautions, analysis.cautions, "Sakura is not seeing a giant red flag.");
   } catch (error) {
     sakuraVerdict.textContent = "--";
     setSakuraFigure("neutral");
-    sakuraSummary.textContent = error instanceof Error ? error.message : "Sakura analysis failed.";
+    renderSakuraSummary(error instanceof Error ? error.message : "Sakura analysis failed.");
     fillSakuraList(sakuraReasons, [], "No analysis points available.");
     fillSakuraList(sakuraCautions, [], "No caution points available.");
   }
@@ -348,6 +348,20 @@ function buildMergedSakuraComment(base, reasons, cautions) {
   const ape = Array.isArray(reasons) && reasons.length ? reasons.slice(0, 2).join(". ") : "I still do not see a clean ape angle";
   const fade = Array.isArray(cautions) && cautions.length ? cautions.slice(0, 2).join(". ") : "there is no giant red flag yet";
   return `${base} Ape angle: ${ape}. Fade angle: ${fade}.`;
+}
+
+function renderSakuraSummary(text) {
+  sakuraSummary.innerHTML = "";
+  const chunks = String(text || "")
+    .match(/[^.!?]+[.!?]?/g)
+    ?.map((item) => item.trim())
+    .filter(Boolean) || ["-"];
+
+  for (let i = 0; i < chunks.length; i += 2) {
+    const paragraph = document.createElement("p");
+    paragraph.textContent = [chunks[i], chunks[i + 1]].filter(Boolean).join(" ");
+    sakuraSummary.appendChild(paragraph);
+  }
 }
 
 function fillSakuraList(target, items, fallbackText) {

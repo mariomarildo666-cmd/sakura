@@ -554,23 +554,64 @@ body:has(#result.hidden) .shell {
   cursor: pointer;
 }
 
-.token-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 0.96fr) minmax(520px, 1.04fr);
-  gap: 24px;
-  align-items: start;
-}
-
-.token-left,
-.token-right,
-.token-address-stack,
+.token-overview,
+.token-info-stack,
+.token-address-pair,
 .token-market,
 .summary-grid {
   display: grid;
   gap: 18px;
 }
 
-.token-left {
+.token-overview {
+  grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
+  align-items: stretch;
+  gap: 24px;
+}
+
+.token-hero-art {
+  position: relative;
+}
+
+.token-hero-glow {
+  position: absolute;
+  inset: 12% 8% 10%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(245, 98, 163, 0.24), rgba(245, 98, 163, 0) 70%);
+  filter: blur(34px);
+}
+
+.token-hero-shell {
+  position: relative;
+  min-height: 100%;
+  height: 100%;
+  display: grid;
+  place-items: end center;
+  padding: 20px 18px 0;
+  border: 1px solid var(--line);
+  border-radius: 34px;
+  background:
+    radial-gradient(circle at 50% 24%, rgba(255, 255, 255, 0.68), transparent 35%),
+    rgba(255, 255, 255, 0.58);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.76),
+    0 22px 42px rgba(193, 172, 181, 0.12);
+  overflow: hidden;
+}
+
+.token-hero-figure {
+  width: 100%;
+  max-width: 300px;
+  height: auto;
+  max-height: 320px;
+  object-fit: contain;
+  animation: sakura-float 5.4s ease-in-out infinite;
+  filter:
+    drop-shadow(0 26px 42px rgba(236, 120, 167, 0.26))
+    drop-shadow(0 0 22px rgba(239, 143, 185, 0.14));
+}
+
+.token-info-stack {
   align-content: start;
 }
 
@@ -666,6 +707,10 @@ body:has(#result.hidden) .shell {
   gap: 12px;
 }
 
+.token-address-pair {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .token-address-value {
   margin: 14px 0 0;
   padding: 16px 18px;
@@ -682,55 +727,6 @@ body:has(#result.hidden) .shell {
 .sakura-shell,
 .chart-shell {
   padding: 24px;
-}
-
-.sakura-layout.premium {
-  display: grid;
-  grid-template-columns: minmax(320px, 0.9fr) minmax(0, 1.1fr);
-  gap: 24px;
-  align-items: stretch;
-}
-
-.sakura-visual.premium {
-  position: relative;
-  min-height: 100%;
-  display: flex;
-}
-
-.sakura-stage-glow {
-  position: absolute;
-  inset: 14% 10% auto;
-  height: 320px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(245, 98, 163, 0.22), rgba(245, 98, 163, 0) 68%);
-  filter: blur(34px);
-}
-
-.sakura-figure-shell.premium {
-  position: relative;
-  display: grid;
-  place-items: center;
-  flex: 1;
-  min-height: 580px;
-  padding: 20px 20px 10px;
-  border-radius: 34px;
-  border: 1px solid var(--line);
-  background:
-    radial-gradient(circle at 50% 26%, rgba(255, 255, 255, 0.68), transparent 35%),
-    rgba(255, 255, 255, 0.58);
-  overflow: hidden;
-}
-
-.sakura-figure.premium {
-  width: 100%;
-  max-width: 440px;
-  max-height: 640px;
-  object-fit: contain;
-  align-self: end;
-  animation: sakura-float 5.4s ease-in-out infinite;
-  filter:
-    drop-shadow(0 28px 46px rgba(236, 120, 167, 0.24))
-    drop-shadow(0 0 24px rgba(239, 143, 185, 0.14));
 }
 
 .sakura-head.premium {
@@ -787,7 +783,15 @@ body:has(#result.hidden) .shell {
   margin: 0;
   color: #4f3d44;
   font-size: 17px;
-  line-height: 2;
+  line-height: 1.95;
+}
+
+.sakura-summary p {
+  margin: 0;
+}
+
+.sakura-summary p + p {
+  margin-top: 14px;
 }
 
 .sakura-grid.premium {
@@ -1109,16 +1113,16 @@ body:has(#result.hidden) .shell {
     max-height: 390px;
   }
 
-  .token-layout {
+  .token-overview {
     grid-template-columns: 1fr;
   }
 
-  .sakura-figure-shell.premium {
-    min-height: 420px;
+  .token-hero-shell {
+    min-height: 340px;
   }
 
-  .sakura-figure.premium {
-    max-height: 460px;
+  .token-address-pair {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -1140,7 +1144,7 @@ body:has(#result.hidden) .shell {
   .hero-topbar-right,
   .token-stats-grid,
   .token-social-grid,
-  .sakura-layout.premium,
+  .token-address-pair,
   .sakura-grid.premium {
     grid-template-columns: 1fr;
     flex-direction: column;
@@ -1175,13 +1179,13 @@ body:has(#result.hidden) .shell {
     grid-template-columns: 1fr;
   }
 
-  .sakura-figure-shell.premium {
-    min-height: 340px;
+  .token-hero-shell {
+    min-height: 300px;
   }
 
-  .sakura-figure.premium {
-    max-width: 300px;
-    max-height: 340px;
+  .token-hero-figure {
+    max-width: 280px;
+    max-height: 300px;
   }
 
   .sakura-verdict {
