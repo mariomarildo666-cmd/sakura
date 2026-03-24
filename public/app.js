@@ -52,6 +52,7 @@ let currentLookupAddress = "";
 let currentSakuraAddress = "";
 let lookupRequestToken = 0;
 let sakuraRequestToken = 0;
+let homepageInitialized = false;
 
 const tokenLogoFallback = document.createElement("div");
 tokenLogoFallback.className = "token-logo-fallback hidden";
@@ -65,9 +66,7 @@ const marketFields = [
   ["Trading Fee", "tradingFeeRate"],
 ];
 
-renderSkeleton();
-setTimeframeButtonsDisabled(true);
-renderRecentSearches();
+initializeHomepage();
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -106,7 +105,7 @@ form.addEventListener("submit", async (event) => {
   try {
     const lookupToken = ++lookupRequestToken;
     currentLookupAddress = address;
-    console.log("fetchCA called");
+    console.log("fetch ca", address);
     const response = await fetch(`/api/ca?address=${encodeURIComponent(address)}`);
     const data = await response.json();
 
@@ -203,7 +202,7 @@ async function renderSakura(address) {
   try {
     const requestToken = ++sakuraRequestToken;
     currentSakuraAddress = address;
-    console.log("fetchSakura called");
+    console.log("fetch sakura", address);
     const response = await fetch(`/api/sakura-agent?address=${encodeURIComponent(address)}&mode=read`);
     const agent = await response.json();
 
@@ -457,10 +456,19 @@ input.addEventListener("paste", (event) => {
   queueMicrotask(() => form.requestSubmit());
 });
 
-const initialAddress = extractAddress(new URL(window.location.href).searchParams.get("ca") || "");
-if (initialAddress) {
-  input.value = initialAddress;
-  queueMicrotask(() => form.requestSubmit());
+function initializeHomepage() {
+  if (homepageInitialized) return;
+  homepageInitialized = true;
+  console.log("init homepage");
+  renderSkeleton();
+  setTimeframeButtonsDisabled(true);
+  renderRecentSearches();
+
+  const initialAddress = extractAddress(new URL(window.location.href).searchParams.get("ca") || "");
+  if (initialAddress) {
+    input.value = initialAddress;
+    queueMicrotask(() => form.requestSubmit());
+  }
 }
 
 function makeShareUrl(address) {
@@ -504,7 +512,7 @@ async function renderRecentSearches(options = {}) {
 
   if ((!recentFetched || force) && !useCache) {
     try {
-      console.log("fetchRecent called");
+      console.log("fetch recent");
       const response = await fetch("/api/recent");
       const data = await response.json();
       recentEntries = response.ok && Array.isArray(data.items) ? data.items : [];
