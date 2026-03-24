@@ -1,8 +1,8 @@
-import { fetchChartCandlesForTimeframe, lookupCa } from "../lib/ca-lookup.js";
+﻿import { lookupCa } from "../lib/ca-lookup.js";
 
 export type SakuraVerdict = "bullish" | "bearish";
 
-export type SakuraScores = {
+type SakuraScores = {
   launchQuality: number;
   memeStrength: number;
   tradeability: number;
@@ -10,48 +10,37 @@ export type SakuraScores = {
   rotationPotential: number;
 };
 
-export type SakuraResult = {
-  tokenAddress: string;
-  verdict: SakuraVerdict;
-  overallScore: number;
-  confidence: number | null;
-  persona: string;
-  verdictLine: string;
-  traderRead: string[];
-  bullCase: string[];
-  bearCase: string[];
-  scores: SakuraScores;
-  finalLine: string;
-  market: {
-    priceUsd: number | null;
-    marketCap: number | null;
-    liquidityUsd: number | null;
-    changePct1h: number;
-    volatilityPct1h: number;
-  };
-  engine: "huggingface";
-  model: string | null;
-};
-
-type SakuraBaseline = Omit<SakuraResult, "engine" | "model" | "confidence" | "persona">;
-
-type SakuraLlmPayload = {
-  verdict?: unknown;
-  traderRead?: unknown;
-  bullCase?: unknown;
-  bearCase?: unknown;
-  scores?: unknown;
-  finalLine?: unknown;
-};
-
-type MiniScorecard = {
+type LegacyScorecard = {
   nameVibe: number;
   socialHeat: number;
   chartHeat: number;
   danger: number;
 };
 
-const SAKURA_SYSTEM_PROMPT = String.raw`You are Sakura, a sharp meme-coin analyst focused on BSC tokens.
+type ParsedSakuraPayload = {
+  verdict: SakuraVerdict;
+  verdictLine: string;
+  traderRead: string[];
+  bullCase: string[];
+  bearCase: string[];
+  scores: SakuraScores;
+  finalLine: string;
+};
+
+export type SakuraResult = ParsedSakuraPayload & {
+  engine: "huggingface" | "heuristic";
+  model: string | null;
+  confidence: number;
+  overallScore: number;
+  summary: string;
+  reasons: string[];
+  cautions: string[];
+  scorecard: LegacyScorecard;
+};
+
+const DEFAULT_HF_MODEL = "meta-llama/Llama-3.1-8B-Instruct:cerebras";
+
+export const SAKURA_SYSTEM_PROMPT = `You are Sakura, a sharp meme-coin analyst focused on BSC tokens.
 
 You behave like a battle-tested degen trader who has seen hundreds of launches, fake pumps, exit liquidity traps, and dead meme coins.
 
@@ -163,30 +152,22 @@ Avoid:
 
 OUTPUT STRUCTURE (MANDATORY)
 
-Always produce output in this format:
-
-VERDICT:
-One short sentence describing the overall read.
-
-TRADER READ:
-2–4 short paragraphs explaining the real trader perspective.
-Focus on tradability, crowding, structure, and risk.
-
-BULL CASE:
-- 3 to 5 short bullet points
-
-BEAR CASE:
-- 3 to 5 short bullet points
-
-SCORES:
-- Launch Quality: X/10
-- Meme Strength: X/10
-- Tradeability: X/10
-- Exit Liquidity Risk: X/10
-- Rotation Potential: X/10
-
-FINAL LINE:
-One punchy closing sentence that sounds like a seasoned degen trader.
+Return valid JSON only with this exact shape:
+{
+  "verdict": "bullish" | "bearish",
+  "verdictLine": "one short sentence",
+  "traderRead": ["paragraph 1", "paragraph 2"],
+  "bullCase": ["point", "point", "point"],
+  "bearCase": ["point", "point", "point"],
+  "scores": {
+    "launchQuality": 0,
+    "memeStrength": 0,
+    "tradeability": 0,
+    "exitLiquidityRisk": 0,
+    "rotationPotential": 0
+  },
+  "finalLine": "one punchy closing sentence"
+}
 
 SCORING RULES
 
@@ -263,597 +244,488 @@ However:
 Bad setups should feel obviously bad to the reader.
 Good setups should still be treated cautiously.`;
 
-const SAKURA_OUTPUT_SCHEMA = [
-  "Return raw JSON only. No markdown. No code fences.",
-  'Use this exact shape: {"verdict":"One short sentence","traderRead":["paragraph 1","paragraph 2"],"bullCase":["..."],"bearCase":["..."],"scores":{"launchQuality":0,"memeStrength":0,"tradeability":0,"exitLiquidityRisk":0,"rotationPotential":0},"finalLine":"One closing sentence"}',
-  "verdict must be one sentence, not a label.",
-  "traderRead must contain 2 to 4 short paragraphs.",
-  "bullCase and bearCase must each contain 3 to 5 short bullet strings.",
-  "Scores must be integers from 0 to 10.",
-  "Do not include any other keys.",
-].join(" ");
+export async function analyzeWithSakura(rawInput: string): Promise<SakuraResult> {
+  const lookup = await lookupCa(rawInput);
+  const heuristic = buildHeuristicResult(lookup);
+  const hfKey = process.env.HF_API_KEY?.trim();
+  const model = process.env.HF_MODEL?.trim() || DEFAULT_HF_MODEL;
 
-export async function analyzeWithSakura(rawInput: string) {
-  const [lookup, chart] = await Promise.all([
-    lookupCa(rawInput),
-    fetchChartCandlesForTimeframe(rawInput, "1h"),
-  ]);
-
-  const baseline = analyzeBaseline(lookup, chart.candles);
-  const huggingFaceResult =
-    (await analyzeWithHuggingFace(lookup, chart.candles, baseline)) ||
-    (await analyzeWithHuggingFace(lookup, chart.candles, baseline));
-
-  if (!huggingFaceResult) {
-    throw new Error("Sakura AI is unavailable right now.");
+  if (!hfKey) {
+    return heuristic;
   }
-
-  return huggingFaceResult;
-}
-
-async function analyzeWithHuggingFace(
-  lookup: Awaited<ReturnType<typeof lookupCa>>,
-  candles: Array<{ open: number; high: number; low: number; close: number; volume?: number }>,
-  baseline: SakuraBaseline,
-) {
-  const apiKey = process.env.HF_API_KEY?.trim() || process.env.HUGGINGFACE_API_KEY?.trim() || process.env.HF_TOKEN?.trim();
-  if (!apiKey) {
-    return null;
-  }
-
-  const model = process.env.HF_MODEL?.trim() || "meta-llama/Llama-3.1-8B-Instruct:cerebras";
-  const candleSummary = summarizeCandles(candles);
-  const payload = {
-    model,
-    messages: [
-      {
-        role: "system",
-        content: `${SAKURA_SYSTEM_PROMPT}\n\n${SAKURA_OUTPUT_SCHEMA}`,
-      },
-      {
-        role: "user",
-        content: JSON.stringify(
-          {
-            token: {
-              address: lookup.tokenAddress,
-              name: lookup.summary.name,
-              symbol: lookup.summary.symbol,
-              creator: lookup.summary.creator,
-              description: lookup.summary.description,
-              website: lookup.summary.website,
-              twitter: lookup.summary.twitter,
-              telegram: lookup.summary.telegram,
-              aiCreator: lookup.summary.aiCreator,
-              liquidityAdded: lookup.summary.liquidityAdded,
-              raisedBnb: lookup.summary.raisedBnb,
-              maxRaisedBnb: lookup.summary.maxRaisedBnb,
-              launchTime: lookup.summary.launchTime,
-            },
-            market: {
-              priceUsd: lookup.dexScreener?.priceUsd || null,
-              marketCap: lookup.dexScreener?.marketCap || null,
-              liquidityUsd: lookup.dexScreener?.liquidityUsd || null,
-              dexId: lookup.dexScreener?.dexId || null,
-              dexUrl: lookup.dexScreener?.url || null,
-            },
-            candles1h: {
-              sampleSize: candles.length,
-              changePct: round(candleSummary.changePct),
-              volatilityPct: round(candleSummary.volatilityPct),
-              greenRatio: round(candleSummary.greenRatio),
-            },
-            baselineRead: {
-              verdict: baseline.verdict,
-              verdictLine: baseline.verdictLine,
-              traderRead: baseline.traderRead,
-              bullCase: baseline.bullCase,
-              bearCase: baseline.bearCase,
-              scores: baseline.scores,
-              finalLine: baseline.finalLine,
-            },
-          },
-          null,
-          2,
-        ),
-      },
-    ],
-    response_format: { type: "json_object" },
-    max_tokens: 550,
-    temperature: 0.7,
-  };
 
   try {
-    const response = await fetch("https://router.huggingface.co/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      const detail = await response.text();
-      console.error(`[sakura:hf] ${response.status} ${response.statusText} ${detail}`.trim());
-      return null;
+    const payload = await requestHuggingFaceAnalysis(hfKey, model, lookup, heuristic);
+    if (!payload) {
+      return heuristic;
     }
 
-    const json = (await response.json()) as {
-      choices?: Array<{
-        message?: {
-          content?: string | null;
-        };
-      }>;
-    };
-
-    const content = json.choices?.[0]?.message?.content?.trim();
-    if (!content) {
-      console.error("[sakura:hf] empty content", JSON.stringify(json));
-      return null;
-    }
-
-    const parsed = normalizeLlmResult(content, baseline);
-    if (!parsed) {
-      console.error(`[sakura:hf] parse failed ${content}`);
-      return null;
-    }
-
-    return {
-      ...parsed,
-      tokenAddress: lookup.tokenAddress,
-      persona: SAKURA_SYSTEM_PROMPT,
-      market: baseline.market,
-      confidence: null,
-      engine: "huggingface" as const,
-      model,
-    } satisfies SakuraResult;
+    return buildRuntimeResult(payload, "huggingface", model, heuristic);
   } catch (error) {
-    console.error("[sakura:hf] request failed", error);
-    return null;
+    console.error("[sakura:hf] runtime failure", error instanceof Error ? error.message : error);
+    return heuristic;
   }
 }
 
-function analyzeBaseline(
+async function requestHuggingFaceAnalysis(
+  apiKey: string,
+  model: string,
   lookup: Awaited<ReturnType<typeof lookupCa>>,
-  candles: Array<{ open: number; high: number; low: number; close: number }>,
-): SakuraBaseline {
-  const liquidityUsd = Number(lookup.dexScreener?.liquidityUsd || 0);
-  const marketCap = Number(lookup.dexScreener?.marketCap || 0);
-  const priceUsd = Number(lookup.dexScreener?.priceUsd || 0);
-  const candleSummary = summarizeCandles(candles);
-  const vibe = scoreNameVibe(lookup.summary.name, lookup.summary.symbol, lookup.summary.description);
-  const socialExists = Boolean(lookup.summary.website || lookup.summary.twitter || lookup.summary.telegram);
-  const socialDepth = Number(Boolean(lookup.summary.website)) + Number(Boolean(lookup.summary.twitter)) + Number(Boolean(lookup.summary.telegram));
-
-  const scorecard: MiniScorecard = {
-    nameVibe: 0,
-    socialHeat: 0,
-    chartHeat: 0,
-    danger: 0,
-  };
-
-  if (vibe.score >= 2) scorecard.nameVibe += 2;
-  else if (vibe.score === 1) scorecard.nameVibe += 1;
-  else if (vibe.score <= -1) scorecard.nameVibe -= 1;
-
-  if (socialDepth >= 2) scorecard.socialHeat += 2;
-  else if (socialExists) scorecard.socialHeat += 1;
-  else scorecard.socialHeat -= 2;
-
-  if (candleSummary.changePct >= 10) scorecard.chartHeat += 2;
-  else if (candleSummary.changePct >= 4) scorecard.chartHeat += 1;
-  else if (candleSummary.changePct <= -10) scorecard.chartHeat -= 2;
-  else if (candleSummary.changePct <= -4) scorecard.chartHeat -= 1;
-
-  if (!lookup.summary.liquidityAdded) scorecard.danger += 1;
-  if (candleSummary.volatilityPct >= 35) scorecard.danger += 1;
-  if (!socialExists) scorecard.danger += 1;
-  if (marketCap > 0 && marketCap < 10000) scorecard.danger += 1;
-  if (candleSummary.changePct <= -8) scorecard.danger += 1;
-  if (liquidityUsd > 0 && marketCap > 0 && liquidityUsd / marketCap < 0.08) scorecard.danger += 1;
-
-  const scores: SakuraScores = {
-    launchQuality: deriveLaunchQuality(lookup, marketCap, liquidityUsd),
-    memeStrength: deriveMemeStrength(vibe.score, socialDepth, candleSummary.changePct),
-    tradeability: deriveTradeability(scorecard, marketCap, liquidityUsd),
-    exitLiquidityRisk: deriveExitRisk(scorecard, candleSummary, liquidityUsd),
-    rotationPotential: deriveRotationPotential(scorecard, marketCap, socialDepth),
-  };
-
-  const verdict = deriveVerdictFromScores("", scores, "bearish");
-  const verdictLine =
-    verdict === "bullish"
-      ? "Tradable if attention holds, but it still needs discipline."
-      : "Weak read overall. This is stalk-at-best, not chaseable.";
-
-  const traderRead = [
-    buildStructureParagraph(scores, marketCap, liquidityUsd, socialExists),
-    buildMomentumParagraph(candleSummary.changePct, candleSummary.volatilityPct, scores),
-    buildCrowdingParagraph(scores, lookup.summary.name, lookup.summary.symbol),
-  ].filter(Boolean);
-
-  const bullCase = finalizeBulletList(
-    [
-      vibe.reason || null,
-      socialDepth >= 2 ? "Social shell is live enough to keep this on the feed." : null,
-      candleSummary.changePct >= 4 ? "Momentum is there, so this can keep moving if attention sticks." : null,
-      marketCap >= 50000 ? "Market cap is big enough to support a real rotation instead of a ghost bounce." : null,
-      priceUsd > 0 && priceUsd < 0.00001 ? "Cheap-unit bias can still pull in the usual retail crowd." : null,
-    ],
-    "Not much of a bull case here beyond short attention spikes.",
-  );
-
-  const bearCase = finalizeBulletList(
-    [
-      vibe.caution || null,
-      !socialExists ? "Social strength looks thin. That kills meme velocity fast." : null,
-      candleSummary.changePct <= -4 ? "Chart structure is weak enough to trap late buyers." : null,
-      scores.exitLiquidityRisk >= 7 ? "Exit liquidity risk is high if this squeezes and stalls." : null,
-      !lookup.summary.liquidityAdded ? "Launch quality still looks unproven." : null,
-    ],
-    "Structure looks weak enough that I would not force this read.",
-  );
-
-  const finalLine =
-    verdict === "bullish"
-      ? "Watch the tape, not the story. This is only good while attention keeps paying."
-      : "Most of these die fast. This one still looks closer to that side of the board.";
-
-  return {
-    tokenAddress: lookup.tokenAddress,
-    verdict,
-    overallScore: calculateOverallScore(scores),
-    verdictLine,
-    traderRead: traderRead.slice(0, 4),
-    bullCase: bullCase.slice(0, 5),
-    bearCase: bearCase.slice(0, 5),
-    scores,
-    finalLine,
-    market: {
-      priceUsd: Number.isFinite(priceUsd) ? priceUsd : null,
-      marketCap: Number.isFinite(marketCap) ? marketCap : null,
-      liquidityUsd: Number.isFinite(liquidityUsd) ? liquidityUsd : null,
-      changePct1h: candleSummary.changePct,
-      volatilityPct1h: candleSummary.volatilityPct,
+  heuristic: SakuraResult,
+): Promise<ParsedSakuraPayload | null> {
+  const response = await fetch("https://router.huggingface.co/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
     },
-  };
-}
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: "system", content: SAKURA_SYSTEM_PROMPT },
+        {
+          role: "user",
+          content: JSON.stringify({
+            tokenAddress: lookup.tokenAddress,
+            name: lookup.summary.name,
+            symbol: lookup.summary.symbol,
+            creator: lookup.summary.creator,
+            website: lookup.summary.website,
+            twitter: lookup.summary.twitter,
+            telegram: lookup.summary.telegram,
+            aiCreator: lookup.summary.aiCreator,
+            liquidityAdded: lookup.summary.liquidityAdded,
+            raisedBnb: lookup.summary.raisedBnb,
+            maxRaisedBnb: lookup.summary.maxRaisedBnb,
+            launchTime: lookup.summary.launchTime,
+            tradingFeeRate: lookup.summary.tradingFeeRate,
+            priceUsd: lookup.dexScreener?.priceUsd,
+            liquidityUsd: lookup.dexScreener?.liquidityUsd,
+            marketCap: lookup.dexScreener?.marketCap,
+            fdv: lookup.dexScreener?.fdv,
+            heuristicContext: {
+              verdict: heuristic.verdict,
+              verdictLine: heuristic.verdictLine,
+              traderRead: heuristic.traderRead,
+              bullCase: heuristic.bullCase,
+              bearCase: heuristic.bearCase,
+              scores: heuristic.scores,
+              finalLine: heuristic.finalLine,
+            },
+          }),
+        },
+      ],
+      temperature: 0.35,
+      response_format: { type: "json_object" },
+    }),
+  });
 
-function normalizeLlmResult(content: string, baseline: SakuraBaseline) {
-  try {
-    const payload = JSON.parse(extractJsonObject(content)) as SakuraLlmPayload;
-    const verdictLine = normalizeSentence(payload.verdict);
-    const traderRead = sanitizeParagraphList(payload.traderRead);
-    const bullCase = sanitizeBulletList(payload.bullCase);
-    const bearCase = sanitizeBulletList(payload.bearCase);
-    const scores = normalizeScores(payload.scores, baseline.scores);
-    const finalLine = normalizeSentence(payload.finalLine);
-
-    if (!verdictLine || traderRead.length < 2 || bullCase.length < 3 || bearCase.length < 3 || !finalLine) {
-      return null;
-    }
-
-    const verdict = deriveVerdictFromScores(verdictLine, scores, baseline.verdict);
-
-    return {
-      verdict,
-      overallScore: calculateOverallScore(scores),
-      verdictLine,
-      traderRead: traderRead.slice(0, 4),
-      bullCase: bullCase.slice(0, 5),
-      bearCase: bearCase.slice(0, 5),
-      scores,
-      finalLine,
-    };
-  } catch {
+  if (!response.ok) {
+    const detail = await response.text();
+    console.error(`[sakura:hf] ${response.status} ${response.statusText} ${detail}`.trim());
     return null;
   }
+
+  const json = (await response.json()) as {
+    choices?: Array<{
+      message?: {
+        content?: string | null;
+      };
+    }>;
+  };
+
+  const content = json.choices?.[0]?.message?.content?.trim();
+  if (!content) {
+    console.error("[sakura:hf] empty content", JSON.stringify(json).slice(0, 500));
+    return null;
+  }
+
+  const normalized = normalizeModelOutput(content);
+  if (!normalized) {
+    console.error("[sakura:hf] parse failed", content);
+    return null;
+  }
+
+  return normalized;
 }
 
-function extractJsonObject(content: string) {
+function normalizeModelOutput(content: string): ParsedSakuraPayload | null {
+  const parsed = parseJsonObject(content);
+  if (!parsed || typeof parsed !== "object") {
+    return null;
+  }
+
+  if (isNewShape(parsed)) {
+    return sanitizeParsedPayload(parsed);
+  }
+
+  if (isLegacyShape(parsed)) {
+    return sanitizeLegacyPayload(parsed);
+  }
+
+  return null;
+}
+
+function parseJsonObject(content: string): unknown {
+  try {
+    return JSON.parse(content);
+  } catch {}
+
+  const fenced = content.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fenced?.[1]) {
+    try {
+      return JSON.parse(fenced[1]);
+    } catch {}
+  }
+
   const start = content.indexOf("{");
   const end = content.lastIndexOf("}");
-  if (start === -1 || end === -1 || end <= start) {
-    throw new Error("No JSON object found.");
-  }
-  return content.slice(start, end + 1);
-}
-
-function sanitizeParagraphList(value: unknown) {
-  if (!Array.isArray(value)) return [];
-  return value
-    .filter((item): item is string => typeof item === "string" && item.trim().length > 0)
-    .map((item) => normalizeSentence(item))
-    .filter((item) => item.length >= 24)
-    .slice(0, 4);
-}
-
-function sanitizeBulletList(value: unknown) {
-  if (!Array.isArray(value)) return [];
-  const seen = new Set<string>();
-  const items: string[] = [];
-
-  for (const item of value) {
-    if (typeof item !== "string") continue;
-    const normalized = normalizeBullet(item);
-    if (!normalized) continue;
-    const key = normalized.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-    items.push(normalized);
-    if (items.length >= 5) break;
+  if (start >= 0 && end > start) {
+    try {
+      return JSON.parse(content.slice(start, end + 1));
+    } catch {}
   }
 
-  return items;
+  return null;
 }
 
-function normalizeScores(value: unknown, fallback: SakuraScores) {
-  const raw = typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
+function isNewShape(value: any): value is {
+  verdict?: unknown;
+  verdictLine?: unknown;
+  traderRead?: unknown;
+  bullCase?: unknown;
+  bearCase?: unknown;
+  scores?: unknown;
+  finalLine?: unknown;
+} {
+  return "verdictLine" in value || "traderRead" in value || "bullCase" in value || "scores" in value;
+}
+
+function isLegacyShape(value: any): value is {
+  verdict?: unknown;
+  summary?: unknown;
+  reasons?: unknown;
+  cautions?: unknown;
+  scorecard?: unknown;
+} {
+  return "summary" in value || "reasons" in value || "cautions" in value || "scorecard" in value;
+}
+
+function sanitizeParsedPayload(value: {
+  verdict?: unknown;
+  verdictLine?: unknown;
+  traderRead?: unknown;
+  bullCase?: unknown;
+  bearCase?: unknown;
+  scores?: unknown;
+  finalLine?: unknown;
+}): ParsedSakuraPayload {
+  const verdict = normalizeVerdict(value.verdict);
+  const traderRead = toCleanList(value.traderRead, 2, ["Attention is there, but the read still needs cleaner structure."]);
+  const bullCase = toCleanList(value.bullCase, 3, ["Enough attention here to stay on watch."]);
+  const bearCase = toCleanList(value.bearCase, 3, ["Structure still leaves late buyers exposed."]);
+  const scores = normalizeScores(value.scores);
+  const verdictLine = cleanSentence(value.verdictLine) || deriveVerdictLine(verdict, scores);
+  const finalLine = cleanSentence(value.finalLine) || deriveFinalLine(verdict, scores);
+
+  return { verdict, verdictLine, traderRead, bullCase, bearCase, scores, finalLine };
+}
+
+function sanitizeLegacyPayload(value: {
+  verdict?: unknown;
+  summary?: unknown;
+  reasons?: unknown;
+  cautions?: unknown;
+  scorecard?: unknown;
+}): ParsedSakuraPayload {
+  const verdict = normalizeVerdict(value.verdict);
+  const traderRead = splitLegacySummary(cleanSentence(value.summary));
+  const bullCase = toCleanList(value.reasons, 3, ["There is at least enough attention here to keep it on radar."]);
+  const bearCase = toCleanList(value.cautions, 3, ["The structure still looks fragile if buyers crowd in."]);
+  const scores = normalizeLegacyScores(value.scorecard);
+  const verdictLine = deriveVerdictLine(verdict, scores, cleanSentence(value.summary));
+  const finalLine = deriveFinalLine(verdict, scores);
+
+  return { verdict, verdictLine, traderRead, bullCase, bearCase, scores, finalLine };
+}
+
+function buildHeuristicResult(lookup: Awaited<ReturnType<typeof lookupCa>>): SakuraResult {
+  const scores = scoreLookup(lookup);
+  const verdict: SakuraVerdict = scores.tradeability >= 6 && scores.exitLiquidityRisk <= 6 ? "bullish" : "bearish";
+  const verdictLine = deriveVerdictLine(verdict, scores, deriveSummary(lookup, verdict, scores));
+  const traderRead = buildTraderRead(lookup, verdict, scores);
+  const bullCase = buildBullCase(lookup, scores);
+  const bearCase = buildBearCase(lookup, scores);
+  const finalLine = deriveFinalLine(verdict, scores);
+
+  return buildRuntimeResult(
+    { verdict, verdictLine, traderRead, bullCase, bearCase, scores, finalLine },
+    "heuristic",
+    null,
+    null,
+  );
+}
+
+function buildRuntimeResult(
+  parsed: ParsedSakuraPayload,
+  engine: "huggingface" | "heuristic",
+  model: string | null,
+  fallback: SakuraResult | null,
+): SakuraResult {
+  const scores = parsed.scores;
+  const overallScore = Math.max(
+    1,
+    Math.min(
+      10,
+      Math.round((scores.launchQuality + scores.memeStrength + scores.tradeability + scores.rotationPotential + (10 - scores.exitLiquidityRisk)) / 5),
+    ),
+  );
+
   return {
-    launchQuality: normalizeScore(raw.launchQuality, fallback.launchQuality),
-    memeStrength: normalizeScore(raw.memeStrength, fallback.memeStrength),
-    tradeability: normalizeScore(raw.tradeability, fallback.tradeability),
-    exitLiquidityRisk: normalizeScore(raw.exitLiquidityRisk, fallback.exitLiquidityRisk),
-    rotationPotential: normalizeScore(raw.rotationPotential, fallback.rotationPotential),
+    ...parsed,
+    engine,
+    model,
+    confidence: overallScore / 10,
+    overallScore,
+    summary: buildLegacySummary(parsed.verdictLine, parsed.traderRead),
+    reasons: parsed.bullCase.length ? parsed.bullCase : fallback?.reasons || ["No clear bull case."],
+    cautions: parsed.bearCase.length ? parsed.bearCase : fallback?.cautions || ["No clear risk case."],
+    scorecard: mapScoresToLegacyScorecard(scores),
   };
 }
 
-function normalizeScore(value: unknown, fallback: number) {
-  const number = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
-  if (!Number.isFinite(number)) return fallback;
-  return Math.max(0, Math.min(10, Math.round(number)));
+function scoreLookup(lookup: Awaited<ReturnType<typeof lookupCa>>): SakuraScores {
+  const hasWebsite = Boolean(lookup.summary.website);
+  const hasTwitter = Boolean(lookup.summary.twitter);
+  const hasTelegram = Boolean(lookup.summary.telegram);
+  const socialCount = [hasWebsite, hasTwitter, hasTelegram].filter(Boolean).length;
+  const marketCap = Number(lookup.dexScreener?.marketCap || 0);
+  const liquidity = Number(lookup.dexScreener?.liquidityUsd || 0);
+  const price = Number(lookup.dexScreener?.priceUsd || 0);
+  const tradingFeeRate = Number(lookup.summary.tradingFeeRate || 0);
+  const raisedBnb = Number(lookup.summary.raisedBnb || 0);
+  const maxRaisedBnb = Number(lookup.summary.maxRaisedBnb || 0);
+  const liquidityAdded = Boolean(lookup.summary.liquidityAdded);
+  const name = `${lookup.summary.name || ""} ${lookup.summary.symbol || ""}`.toLowerCase();
+  const memeHits = ["ai", "dog", "cat", "pepe", "meme", "siren", "moon", "pump", "king", "inu"].filter((word) =>
+    name.includes(word),
+  ).length;
+
+  let launchQuality = 3;
+  if (liquidityAdded) launchQuality += 2;
+  if (raisedBnb > 0) launchQuality += 1;
+  if (maxRaisedBnb > 0 && raisedBnb / maxRaisedBnb > 0.35) launchQuality += 1;
+  if (tradingFeeRate > 0 && tradingFeeRate <= 0.02) launchQuality += 1;
+  if (socialCount >= 2) launchQuality += 1;
+
+  let memeStrength = 2 + Math.min(4, memeHits);
+  if (socialCount >= 2) memeStrength += 1;
+  if ((lookup.summary.name || "").length > 0 && (lookup.summary.symbol || "").length > 0) memeStrength += 1;
+
+  let tradeability = 2;
+  if (liquidity >= 5000) tradeability += 2;
+  if (marketCap >= 25000) tradeability += 2;
+  if (price > 0) tradeability += 1;
+  if (socialCount >= 2) tradeability += 1;
+  if (liquidityAdded) tradeability += 1;
+
+  let exitLiquidityRisk = 5;
+  if (!liquidityAdded) exitLiquidityRisk += 2;
+  if (liquidity < 5000) exitLiquidityRisk += 2;
+  if (marketCap > 0 && liquidity > 0 && marketCap / liquidity > 18) exitLiquidityRisk += 1;
+  if (socialCount === 0) exitLiquidityRisk += 1;
+  if (tradingFeeRate > 0.03) exitLiquidityRisk += 1;
+  if (socialCount >= 2 && liquidity >= 10000) exitLiquidityRisk -= 2;
+
+  let rotationPotential = 2;
+  if (socialCount >= 2) rotationPotential += 2;
+  if (memeHits >= 1) rotationPotential += 2;
+  if (marketCap >= 30000 && marketCap <= 4000000) rotationPotential += 2;
+  if (liquidity >= 10000) rotationPotential += 1;
+
+  return {
+    launchQuality: clampScore(launchQuality),
+    memeStrength: clampScore(memeStrength),
+    tradeability: clampScore(tradeability),
+    exitLiquidityRisk: clampScore(exitLiquidityRisk),
+    rotationPotential: clampScore(rotationPotential),
+  };
 }
 
-function normalizeSentence(value: unknown) {
-  if (typeof value !== "string") return "";
-  return value.replace(/\s+/g, " ").trim();
+function buildTraderRead(
+  lookup: Awaited<ReturnType<typeof lookupCa>>,
+  verdict: SakuraVerdict,
+  scores: SakuraScores,
+): string[] {
+  const socialCount = [lookup.summary.website, lookup.summary.twitter, lookup.summary.telegram].filter(Boolean).length;
+  const liquidity = Number(lookup.dexScreener?.liquidityUsd || 0);
+  const marketCap = Number(lookup.dexScreener?.marketCap || 0);
+
+  const first =
+    verdict === "bullish"
+      ? `There is enough here to keep it tradable. Attention is not totally fake, and the setup has at least some structure behind the meme.`
+      : `This read is weak unless attention bails it out. The meme may exist, but the structure is still too loose to trust blindly.`;
+
+  const second =
+    socialCount >= 2
+      ? `Social shell is at least present. That gives it a chance to hold attention for a rotation instead of dying on first pullback.`
+      : `Social shell is thin. That matters on BSC, because weak distribution plus weak socials usually turns late entries into exit liquidity.`;
+
+  const third =
+    liquidity > 0 && marketCap > 0
+      ? marketCap / Math.max(liquidity, 1) > 18
+        ? `Market cap is stretched versus liquidity. That is the kind of ratio that looks fine until the crowd leans too hard and slips through the floor.`
+        : `Market cap versus liquidity is still inside a range where this can trade normally if attention sticks.`
+      : `Market structure data is incomplete. Treat it like a watchlist name first, not a clean chase.`;
+
+  return [first, second, third].map(cleanSentence).filter(Boolean);
 }
 
-function normalizeBullet(value: string) {
-  return normalizeSentence(value)
-    .replace(/^[-*•]\s*/, "")
-    .replace(/\.$/, "")
+function buildBullCase(lookup: Awaited<ReturnType<typeof lookupCa>>, scores: SakuraScores): string[] {
+  const points: string[] = [];
+  if (scores.memeStrength >= 6) points.push("Meme packaging is good enough to catch attention fast.");
+  if ([lookup.summary.website, lookup.summary.twitter, lookup.summary.telegram].filter(Boolean).length >= 2) {
+    points.push("The social shell is good enough to support a rotation if buyers show up.");
+  }
+  if (scores.tradeability >= 6) points.push("There is enough structure here to treat it as tradable, not just noise.");
+  if (scores.rotationPotential >= 6) points.push("This has room to be stalked as a rotation candidate instead of ignored.");
+  if (scores.launchQuality >= 6) points.push("Launch quality is respectable for a BSC meme setup.");
+  return points.slice(0, 5);
+}
+
+function buildBearCase(lookup: Awaited<ReturnType<typeof lookupCa>>, scores: SakuraScores): string[] {
+  const points: string[] = [];
+  if (scores.exitLiquidityRisk >= 7) points.push("Exit risk is elevated. Late buyers can get clipped fast here.");
+  if (!lookup.summary.liquidityAdded) points.push("Liquidity still looks too weak to trust under pressure.");
+  if ([lookup.summary.website, lookup.summary.twitter, lookup.summary.telegram].filter(Boolean).length <= 1) {
+    points.push("Social backing is thin, which makes attention fragile.");
+  }
+  if (scores.tradeability <= 4) points.push("Tradability is weak. This looks more like a watch than a chase.");
+  if (scores.launchQuality <= 4) points.push("Launch quality is not strong enough to earn blind trust.");
+  return points.slice(0, 5);
+}
+
+function deriveSummary(
+  lookup: Awaited<ReturnType<typeof lookupCa>>,
+  verdict: SakuraVerdict,
+  scores: SakuraScores,
+): string {
+  const name = lookup.summary.name || lookup.summary.symbol || "This coin";
+  if (verdict === "bullish") {
+    return `${name} has enough attention and structure to be tradable, but it still needs discipline.`;
+  }
+  if (scores.exitLiquidityRisk >= 7) {
+    return `${name} looks more like exit liquidity risk than a clean rotation.`;
+  }
+  return `${name} has some meme appeal, but the setup is still too loose to trust.`;
+}
+
+function buildLegacySummary(verdictLine: string, traderRead: string[]): string {
+  const parts = [cleanSentence(verdictLine), ...traderRead.slice(0, 2).map(cleanSentence)].filter(Boolean);
+  return parts.join(" ");
+}
+
+function splitLegacySummary(summary: string): string[] {
+  if (!summary) {
+    return ["Attention is there, but the read is still incomplete."];
+  }
+
+  const parts = summary
+    .split(/(?<=[.!?])\s+/)
+    .map(cleanSentence)
+    .filter(Boolean);
+
+  return parts.length ? parts.slice(0, 4) : [summary];
+}
+
+function deriveVerdictLine(verdict: SakuraVerdict, scores: SakuraScores, summary?: string): string {
+  if (summary) {
+    return cleanSentence(summary);
+  }
+
+  if (verdict === "bullish") {
+    return scores.tradeability >= 7
+      ? "Tradable setup, but still worth stalking with discipline."
+      : "Interesting enough to stalk, not clean enough to ape blind.";
+  }
+
+  return scores.exitLiquidityRisk >= 7
+    ? "Crowded or weak enough to treat like exit liquidity risk."
+    : "There is some attention here, but the structure still looks too soft.";
+}
+
+function deriveFinalLine(verdict: SakuraVerdict, scores: SakuraScores): string {
+  if (verdict === "bullish") {
+    return scores.tradeability >= 7
+      ? "Good enough to trade. Not good enough to get lazy."
+      : "Keep it on watch, but make it earn the chase.";
+  }
+
+  return scores.exitLiquidityRisk >= 7
+    ? "Looks dangerous enough to fade until structure proves otherwise."
+    : "Fine to stalk from distance, not something to trust with size yet.";
+}
+
+function normalizeScores(value: unknown): SakuraScores {
+  const raw = typeof value === "object" && value ? (value as Record<string, unknown>) : {};
+  return {
+    launchQuality: clampScore(raw.launchQuality),
+    memeStrength: clampScore(raw.memeStrength),
+    tradeability: clampScore(raw.tradeability),
+    exitLiquidityRisk: clampScore(raw.exitLiquidityRisk),
+    rotationPotential: clampScore(raw.rotationPotential),
+  };
+}
+
+function normalizeLegacyScores(value: unknown): SakuraScores {
+  const raw = typeof value === "object" && value ? (value as Record<string, unknown>) : {};
+  const nameVibe = clampScore(raw.nameVibe, 5);
+  const socialHeat = clampScore(raw.socialHeat, 4);
+  const chartHeat = clampScore(raw.chartHeat, 4);
+  const danger = clampScore(raw.danger, 6);
+  return {
+    launchQuality: clampScore((socialHeat + chartHeat) / 2),
+    memeStrength: nameVibe,
+    tradeability: chartHeat,
+    exitLiquidityRisk: danger,
+    rotationPotential: clampScore((nameVibe + socialHeat) / 2),
+  };
+}
+
+function mapScoresToLegacyScorecard(scores: SakuraScores): LegacyScorecard {
+  return {
+    nameVibe: scores.memeStrength,
+    socialHeat: scores.rotationPotential,
+    chartHeat: scores.tradeability,
+    danger: scores.exitLiquidityRisk,
+  };
+}
+
+function normalizeVerdict(value: unknown): SakuraVerdict {
+  return String(value).toLowerCase() === "bullish" ? "bullish" : "bearish";
+}
+
+function toCleanList(value: unknown, minimum: number, fallback: string[]): string[] {
+  const list = Array.isArray(value)
+    ? value
+    : typeof value === "string"
+      ? value.split(/\n+/)
+      : [];
+
+  const cleaned = list.map(cleanSentence).filter(Boolean);
+  return cleaned.length >= minimum ? cleaned.slice(0, 5) : [...cleaned, ...fallback].slice(0, 5);
+}
+
+function cleanSentence(value: unknown): string {
+  return String(value || "")
+    .replace(/\s+/g, " ")
+    .replace(/^[\-•\s]+/, "")
     .trim();
 }
 
-function calculateOverallScore(scores: SakuraScores) {
-  const weighted =
-    scores.launchQuality * 0.18 +
-    scores.memeStrength * 0.18 +
-    scores.tradeability * 0.28 +
-    (10 - scores.exitLiquidityRisk) * 0.18 +
-    scores.rotationPotential * 0.18;
-  return Math.max(0, Math.min(10, Math.round(weighted)));
-}
-
-function summarizeCandles(candles: Array<{ open: number; high: number; low: number; close: number }>) {
-  if (!candles.length) {
-    return {
-      changePct: 0,
-      volatilityPct: 0,
-      greenRatio: 0.5,
-    };
-  }
-
-  const closes = candles.map((candle) => candle.close);
-  const highs = candles.map((candle) => candle.high);
-  const lows = candles.map((candle) => candle.low);
-  const first = closes[0] || 0;
-  const last = closes[closes.length - 1] || 0;
-  const maxHigh = Math.max(...highs);
-  const minLow = Math.min(...lows);
-  const greenCount = candles.filter((candle) => candle.close >= candle.open).length;
-
-  return {
-    changePct: first > 0 ? ((last - first) / first) * 100 : 0,
-    volatilityPct: minLow > 0 ? ((maxHigh - minLow) / minLow) * 100 : 0,
-    greenRatio: greenCount / candles.length,
-  };
-}
-
-function round(value: number) {
-  return Math.round(value * 100) / 100;
-}
-
-function scoreNameVibe(name: string | null, symbol: string | null, description: string | null) {
-  const text = `${name || ""} ${symbol || ""} ${description || ""}`.toLowerCase();
-  let score = 0;
-  let reason: string | null = null;
-  let caution: string | null = null;
-
-  if (symbol && symbol.length >= 3 && symbol.length <= 6) {
-    score += 1;
-    reason = "Ticker is short enough to travel clean if attention shows up.";
-  }
-
-  if (name && /ai|agent|cat|dog|pepe|sakura|moon|pump|meme|coin|inu/.test(name.toLowerCase())) {
-    score += 1;
-    reason = "Narrative is easy to clock fast. That matters on BSC.";
-  }
-
-  if (description && description.length > 24) {
-    score += 1;
-  }
-
-  if (text.includes("fortune") || text.includes("oracle") || text.includes("agent")) {
-    score += 1;
-    reason = "Theme has enough hook to get attention without overexplaining it.";
-  }
-
-  if (name && name.length > 18) {
-    score -= 1;
-    caution = "Branding is too long. Harder to move clean in chats.";
-  }
-
-  if (symbol && symbol.length > 8) {
-    score -= 1;
-    caution = "Ticker is too long. It loses punch.";
-  }
-
-  if (!/[a-z0-9]/i.test(text)) {
-    score -= 1;
-    caution = "Branding feels random, not sticky.";
-  }
-
-  return { score, reason, caution };
-}
-
-function deriveLaunchQuality(
-  lookup: Awaited<ReturnType<typeof lookupCa>>,
-  marketCap: number,
-  liquidityUsd: number,
-) {
-  let score = 4;
-  if (lookup.summary.liquidityAdded) score += 2;
-  if (lookup.summary.aiCreator) score += 1;
-  if (marketCap >= 25000) score += 1;
-  if (liquidityUsd >= 5000) score += 1;
-  if (!lookup.summary.liquidityAdded) score -= 2;
-  return clampScore(score);
-}
-
-function deriveMemeStrength(nameVibe: number, socialDepth: number, changePct: number) {
-  let score = 4 + nameVibe * 2;
-  if (socialDepth >= 2) score += 2;
-  else if (socialDepth === 1) score += 1;
-  else score -= 2;
-  if (changePct >= 8) score += 1;
-  return clampScore(score);
-}
-
-function deriveTradeability(scorecard: MiniScorecard, marketCap: number, liquidityUsd: number) {
-  let score = 4 + scorecard.chartHeat * 2 + scorecard.socialHeat;
-  if (marketCap >= 30000) score += 1;
-  if (liquidityUsd >= 7000) score += 1;
-  if (scorecard.danger >= 3) score -= 2;
-  return clampScore(score);
-}
-
-function deriveExitRisk(
-  scorecard: MiniScorecard,
-  candleSummary: { volatilityPct: number; changePct: number },
-  liquidityUsd: number,
-) {
-  let score = 5 + scorecard.danger * 2;
-  if (candleSummary.volatilityPct >= 35) score += 1;
-  if (candleSummary.changePct >= 15) score += 1;
-  if (liquidityUsd >= 12000) score -= 1;
-  return clampScore(score);
-}
-
-function deriveRotationPotential(scorecard: MiniScorecard, marketCap: number, socialDepth: number) {
-  let score = 4 + scorecard.chartHeat + scorecard.socialHeat;
-  if (marketCap >= 50000) score += 2;
-  else if (marketCap >= 20000) score += 1;
-  if (socialDepth >= 2) score += 1;
-  if (scorecard.danger >= 3) score -= 1;
-  return clampScore(score);
-}
-
-function clampScore(value: number) {
-  return Math.max(0, Math.min(10, Math.round(value)));
-}
-
-function deriveVerdictFromScores(verdictLine: string, scores: SakuraScores, fallback: SakuraVerdict): SakuraVerdict {
-  const normalized = verdictLine.toLowerCase();
-  const positiveSignal =
-    scores.tradeability * 0.35 +
-    scores.rotationPotential * 0.25 +
-    scores.memeStrength * 0.2 +
-    scores.launchQuality * 0.2;
-  const negativeSignal = scores.exitLiquidityRisk * 0.45 + Math.max(0, 6 - scores.tradeability) * 0.35;
-
-  if (/\b(pass|fade|weak|dangerous|avoid|dead|ignore|crowded|fragile|exit liquidity)\b/.test(normalized)) {
-    return "bearish";
-  }
-
-  if (/\b(tradable|stalkable|worth stalking|decent rotation|live|interesting)\b/.test(normalized)) {
-    return "bullish";
-  }
-
-  if (positiveSignal - negativeSignal >= 1) {
-    return "bullish";
-  }
-
-  return fallback;
-}
-
-function buildStructureParagraph(
-  scores: SakuraScores,
-  marketCap: number,
-  liquidityUsd: number,
-  socialExists: boolean,
-) {
-  if (!marketCap && !liquidityUsd) {
-    return "Data is still thin. Hard to call this properly when structure is not fully on the table.";
-  }
-
-  if (scores.tradeability >= 7) {
-    return "Enough structure here to trade it if attention keeps doing the work. Not clean enough to marry, but clean enough to watch closely.";
-  }
-
-  if (scores.tradeability <= 4) {
-    return "Structure still looks loose. You can get a bounce, but that is not the same thing as having a good setup.";
-  }
-
-  return socialExists
-    ? "There is at least some structure behind the move, but it still needs attention to stay alive."
-    : "Without real social backing, this setup has to prove itself on price alone.";
-}
-
-function buildMomentumParagraph(changePct: number, volatilityPct: number, scores: SakuraScores) {
-  if (changePct >= 10) {
-    return volatilityPct >= 35
-      ? "Momentum is there, but the tape is hot enough to punish anyone chasing too late."
-      : "Momentum looks real for now. This runs while buyers stay interested.";
-  }
-
-  if (changePct <= -8) {
-    return "Tape looks weak right now. If this bounces, it still has to prove it is not just exit liquidity recycling.";
-  }
-
-  if (scores.exitLiquidityRisk >= 7) {
-    return "The move can still squeeze, but the risk/reward degrades fast once the crowd starts piling in.";
-  }
-
-  return "Nothing broken, nothing clean. Feels more like a stalking setup than a chase.";
-}
-
-function buildCrowdingParagraph(scores: SakuraScores, name: string | null, symbol: string | null) {
-  const identity = [name, symbol ? `$${symbol}` : null].filter(Boolean).join(" / ");
-
-  if (scores.memeStrength >= 7 && scores.tradeability < 6) {
-    return `${identity || "This coin"} has enough surface meme strength, but the structure is weaker than the branding. That disconnect matters.`;
-  }
-
-  if (scores.rotationPotential >= 7) {
-    return `${identity || "This coin"} has enough attention potential to stay on the watchlist, but I would still respect crowding risk.`;
-  }
-
-  if (scores.memeStrength <= 4) {
-    return `${identity || "This coin"} does not have much natural pull. If volume comes, it still needs a story people will actually carry.`;
-  }
-
-  return `${identity || "This coin"} is not a clean pass, but it still needs more than headline attention to matter.`;
-}
-
-function finalizeBulletList(items: Array<string | null>, fallback: string) {
-  const seen = new Set<string>();
-  const final: string[] = [];
-
-  for (const item of items) {
-    if (!item) continue;
-    const normalized = normalizeBullet(item);
-    if (!normalized) continue;
-    const key = normalized.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-    final.push(normalized);
-  }
-
-  if (!final.length) {
-    final.push(fallback);
-  }
-
-  return final;
+function clampScore(value: unknown, fallback = 5): number {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.max(1, Math.min(10, Math.round(number)));
 }
