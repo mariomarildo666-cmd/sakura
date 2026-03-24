@@ -150,6 +150,26 @@ Avoid:
 - cringe hype language
 - long repetitive paragraphs
 
+PRESENTATION RULES
+
+- Do not start commentary fields with the token name.
+- Token names may be non-English. Keep them exactly as they are if mentioned.
+- Commentary itself must remain clean English.
+- Treat token name as metadata, not as the first sentence of the read.
+- TRADER READ must be maximum 2 short paragraphs.
+- Each TRADER READ paragraph must make a distinct point.
+- Do not repeat the same idea across TRADER READ, BULL CASE, and BEAR CASE.
+- If verdict is bearish or tradeability is weak, keep the bull case modest.
+- Avoid weak filler like:
+  - "may exist"
+  - "at least present"
+  - "data is incomplete"
+- Prefer stronger trader phrasing like:
+  - "enough attention to matter"
+  - "not enough structure to trust"
+  - "watchlist material, not chase material"
+  - "late buyers can get farmed here"
+
 OUTPUT STRUCTURE (MANDATORY)
 
 Return valid JSON only with this exact shape:
@@ -422,14 +442,14 @@ function sanitizeParsedPayload(value: {
   finalLine?: unknown;
 }): ParsedSakuraPayload {
   const verdict = normalizeVerdict(value.verdict);
-  const traderRead = toCleanList(value.traderRead, 2, ["Attention is there, but the read still needs cleaner structure."]);
-  const bullCase = toCleanList(value.bullCase, 3, ["Enough attention here to stay on watch."]);
-  const bearCase = toCleanList(value.bearCase, 3, ["Structure still leaves late buyers exposed."]);
   const scores = normalizeScores(value.scores);
   const verdictLine = cleanSentence(value.verdictLine) || deriveVerdictLine(verdict, scores);
+  const traderRead = toCleanList(value.traderRead, 2, ["Enough attention to matter, but not enough structure to trust yet."]);
+  const bullCase = toCleanList(value.bullCase, 3, ["Enough attention here to keep it on the watchlist."]);
+  const bearCase = toCleanList(value.bearCase, 3, ["Late buyers can get farmed fast if this loses attention."]);
   const finalLine = cleanSentence(value.finalLine) || deriveFinalLine(verdict, scores);
 
-  return { verdict, verdictLine, traderRead, bullCase, bearCase, scores, finalLine };
+  return postProcessPayload({ verdict, verdictLine, traderRead, bullCase, bearCase, scores, finalLine });
 }
 
 function sanitizeLegacyPayload(value: {
@@ -440,14 +460,14 @@ function sanitizeLegacyPayload(value: {
   scorecard?: unknown;
 }): ParsedSakuraPayload {
   const verdict = normalizeVerdict(value.verdict);
-  const traderRead = splitLegacySummary(cleanSentence(value.summary));
-  const bullCase = toCleanList(value.reasons, 3, ["There is at least enough attention here to keep it on radar."]);
-  const bearCase = toCleanList(value.cautions, 3, ["The structure still looks fragile if buyers crowd in."]);
   const scores = normalizeLegacyScores(value.scorecard);
   const verdictLine = deriveVerdictLine(verdict, scores, cleanSentence(value.summary));
+  const traderRead = splitLegacySummary(cleanSentence(value.summary));
+  const bullCase = toCleanList(value.reasons, 3, ["Enough attention here to keep it on radar."]);
+  const bearCase = toCleanList(value.cautions, 3, ["The structure still looks fragile if buyers crowd in."]);
   const finalLine = deriveFinalLine(verdict, scores);
 
-  return { verdict, verdictLine, traderRead, bullCase, bearCase, scores, finalLine };
+  return postProcessPayload({ verdict, verdictLine, traderRead, bullCase, bearCase, scores, finalLine });
 }
 
 function buildHeuristicResult(lookup: Awaited<ReturnType<typeof lookupCa>>): SakuraResult {
@@ -460,7 +480,7 @@ function buildHeuristicResult(lookup: Awaited<ReturnType<typeof lookupCa>>): Sak
   const finalLine = deriveFinalLine(verdict, scores);
 
   return buildRuntimeResult(
-    { verdict, verdictLine, traderRead, bullCase, bearCase, scores, finalLine },
+    postProcessPayload({ verdict, verdictLine, traderRead, bullCase, bearCase, scores, finalLine }, lookup.summary.name, lookup.summary.symbol),
     "heuristic",
     null,
     null,
@@ -564,22 +584,17 @@ function buildTraderRead(
 
   const first =
     verdict === "bullish"
-      ? `There is enough here to keep it tradable. Attention is not totally fake, and the setup has at least some structure behind the meme.`
-      : `This read is weak unless attention bails it out. The meme may exist, but the structure is still too loose to trust blindly.`;
+      ? `Enough attention to matter, and the setup has enough structure to trade if buyers keep showing up.`
+      : `Not enough structure to trust. If this moves, it is probably attention doing the work, not quality.`;
 
   const second =
     socialCount >= 2
-      ? `Social shell is at least present. That gives it a chance to hold attention for a rotation instead of dying on first pullback.`
-      : `Social shell is thin. That matters on BSC, because weak distribution plus weak socials usually turns late entries into exit liquidity.`;
+      ? `Socials are good enough to support a rotation. If attention sticks, this can stay tradable instead of fading on the first stall.`
+      : liquidity > 0 && marketCap > 0 && marketCap / Math.max(liquidity, 1) > 18
+        ? `The ratio is stretched enough that late buyers can get farmed here. Watchlist material, not chase material.`
+        : `Social backing is thin. That keeps this in watchlist territory unless structure improves fast.`;
 
-  const third =
-    liquidity > 0 && marketCap > 0
-      ? marketCap / Math.max(liquidity, 1) > 18
-        ? `Market cap is stretched versus liquidity. That is the kind of ratio that looks fine until the crowd leans too hard and slips through the floor.`
-        : `Market cap versus liquidity is still inside a range where this can trade normally if attention sticks.`
-      : `Market structure data is incomplete. Treat it like a watchlist name first, not a clean chase.`;
-
-  return [first, second, third].map(cleanSentence).filter(Boolean);
+  return [first, second].map(cleanSentence).filter(Boolean);
 }
 
 function buildBullCase(lookup: Awaited<ReturnType<typeof lookupCa>>, scores: SakuraScores): string[] {
@@ -611,14 +626,13 @@ function deriveSummary(
   verdict: SakuraVerdict,
   scores: SakuraScores,
 ): string {
-  const name = lookup.summary.name || lookup.summary.symbol || "This coin";
   if (verdict === "bullish") {
-    return `${name} has enough attention and structure to be tradable, but it still needs discipline.`;
+    return `Enough attention and structure to stay tradable, but it still needs discipline.`;
   }
   if (scores.exitLiquidityRisk >= 7) {
-    return `${name} looks more like exit liquidity risk than a clean rotation.`;
+    return `This looks more like exit liquidity risk than a clean rotation.`;
   }
-  return `${name} has some meme appeal, but the setup is still too loose to trust.`;
+  return `Some meme appeal is there, but the setup is still too loose to trust.`;
 }
 
 function buildLegacySummary(verdictLine: string, traderRead: string[]): string {
@@ -653,6 +667,79 @@ function deriveVerdictLine(verdict: SakuraVerdict, scores: SakuraScores, summary
   return scores.exitLiquidityRisk >= 7
     ? "Crowded or weak enough to treat like exit liquidity risk."
     : "There is some attention here, but the structure still looks too soft.";
+}
+
+function postProcessPayload(
+  payload: ParsedSakuraPayload,
+  tokenName?: string | null,
+  tokenSymbol?: string | null,
+): ParsedSakuraPayload {
+  const seen = new Set<string>();
+  const verdictLine = stripLeadingTokenReference(payload.verdictLine, tokenName, tokenSymbol);
+  const traderRead = dedupeLines(
+    payload.traderRead.map((line) => stripLeadingTokenReference(line, tokenName, tokenSymbol)),
+    seen,
+    2,
+  );
+
+  const bullCeiling = payload.verdict === "bearish" || payload.scores.tradeability <= 4 ? 3 : 5;
+  const bullCase = dedupeLines(
+    payload.bullCase.map((line) => stripLeadingTokenReference(line, tokenName, tokenSymbol)),
+    seen,
+    bullCeiling,
+  );
+  const bearCase = dedupeLines(
+    payload.bearCase.map((line) => stripLeadingTokenReference(line, tokenName, tokenSymbol)),
+    seen,
+    5,
+  );
+  const finalLine = stripLeadingTokenReference(payload.finalLine, tokenName, tokenSymbol);
+
+  return {
+    ...payload,
+    verdictLine,
+    traderRead: traderRead.length ? traderRead : ["Enough attention to matter, but not enough structure to trust yet."],
+    bullCase: bullCase.length ? bullCase : ["Enough attention here to keep it on the watchlist."],
+    bearCase: bearCase.length ? bearCase : ["Late buyers can get farmed fast if this loses attention."],
+    finalLine,
+  };
+}
+
+function dedupeLines(lines: string[], seen: Set<string>, limit: number): string[] {
+  const output: string[] = [];
+  for (const raw of lines) {
+    const line = cleanSentence(raw);
+    if (!line) continue;
+    const key = normalizeIdeaKey(line);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    output.push(line);
+    if (output.length >= limit) break;
+  }
+  return output;
+}
+
+function normalizeIdeaKey(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function stripLeadingTokenReference(value: string, tokenName?: string | null, tokenSymbol?: string | null): string {
+  let next = cleanSentence(value);
+  for (const candidate of [tokenName, tokenSymbol]) {
+    const name = cleanSentence(candidate);
+    if (!name) continue;
+    const escaped = escapeRegExp(name);
+    next = next.replace(new RegExp(`^${escaped}\\s*[:,-]?\\s*`, "i"), "");
+  }
+  return next;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function deriveFinalLine(verdict: SakuraVerdict, scores: SakuraScores): string {
