@@ -7,10 +7,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=IBM+Plex+Mono:wght@400;500;700&family=Orbitron:wght@500;700;800&family=Rajdhani:wght@500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=20260323e" />
+    <link rel="stylesheet" href="/styles.css?v=20260324a" />
   </head>
   <body>
     <div class="backdrop backdrop-a"></div>
@@ -44,7 +44,14 @@
 
         <header class="hero-topbar">
           <div class="hero-brand-block">
-            <a href="/" class="hero-brand" aria-label="Sakura Terminal home">アニマンガヘブン</a>
+            <a href="/" class="hero-brand-lockup" aria-label="Sakura Terminal home">
+              <span class="hero-brand-mark" aria-hidden="true"></span>
+              <span class="hero-brand-copy">
+                <span class="hero-brand-kana">アニマンガヘブン</span>
+                <span class="hero-brand-name">SAKURA TERMINAL</span>
+                <span class="hero-brand-sub">Contract Intelligence Engine</span>
+              </span>
+            </a>
           </div>
 
           <div class="hero-topbar-right">
@@ -81,6 +88,7 @@
         <section id="history-shell" class="hero-history hero-history-band hidden">
           <div class="hero-history-head">
             <p class="hero-history-title">Recent Searches</p>
+            <button id="history-clear" class="history-clear-btn" type="button">Clear</button>
           </div>
           <div id="history-list" class="hero-history-list"></div>
         </section>
@@ -242,7 +250,7 @@
       </section>
     </main>
 
-    <script src="/app.js?v=20260323e" type="module"></script>
+    <script src="/app.js?v=20260324a" type="module"></script>
     <script type="module">
       const heroStart = document.querySelector("#hero-start");
       const heroInput = document.querySelector("#ca-input");

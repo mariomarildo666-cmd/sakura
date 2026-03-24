@@ -3,6 +3,7 @@ const input = document.querySelector("#ca-input");
 const status = document.querySelector("#status");
 const historyShell = document.querySelector("#history-shell");
 const historyList = document.querySelector("#history-list");
+const historyClear = document.querySelector("#history-clear");
 const homeRail = document.querySelector(".rail-home");
 const result = document.querySelector("#result");
 const skeletonGrid = document.querySelector("#skeleton-grid");
@@ -111,6 +112,13 @@ form.addEventListener("submit", async (event) => {
 homeRail?.addEventListener("click", (event) => {
   event.preventDefault();
   resetHomeView();
+});
+
+historyClear?.addEventListener("click", async () => {
+  try {
+    await fetch("/api/recent", { method: "DELETE" });
+  } catch {}
+  renderRecentSearches();
 });
 
 timeframeButtons.forEach((button) => {
@@ -493,10 +501,12 @@ async function renderRecentSearches() {
 
   if (!entries.length) {
     historyShell.classList.add("hidden");
+    historyClear?.classList.add("hidden");
     return;
   }
 
   historyShell.classList.remove("hidden");
+  historyClear?.classList.remove("hidden");
 
   for (const entry of entries) {
     const button = document.createElement("button");

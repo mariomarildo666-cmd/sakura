@@ -56,6 +56,12 @@ const server = createServer(async (req, res) => {
       return;
     }
 
+    if (url.pathname === "/api/recent" && req.method === "DELETE") {
+      recentSearches.length = 0;
+      sendJson(res, 200, { ok: true });
+      return;
+    }
+
     if (url.pathname === "/api/recent") {
       sendJson(res, 200, { items: recentSearches });
       return;
