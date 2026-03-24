@@ -27,6 +27,32 @@ type ParsedSakuraPayload = {
   finalLine: string;
 };
 
+type SakuraEvidenceContext = {
+  hasName: boolean;
+  hasSymbol: boolean;
+  hasCreatorAddress: boolean;
+  hasWebsite: boolean;
+  hasTwitter: boolean;
+  hasTelegram: boolean;
+  socialLinkCount: number;
+  hasPrice: boolean;
+  hasLiquidity: boolean;
+  hasMarketCap: boolean;
+  hasFdv: boolean;
+  hasPair: boolean;
+  hasLaunchTime: boolean;
+  hasRaisedBnb: boolean;
+  hasMaxRaisedBnb: boolean;
+  hasTradingFeeRate: boolean;
+  liquidityAdded: boolean;
+  hasCreatorHistory: false;
+  hasHolderData: false;
+  hasWalletDistribution: false;
+  hasSocialMetrics: false;
+  hasNarrativeMetrics: false;
+  hasAttentionMetrics: false;
+};
+
 export type SakuraResult = ParsedSakuraPayload & {
   engine: "huggingface" | "heuristic";
   model: string | null;
@@ -285,28 +311,79 @@ However:
 - Always explain WHY the setup is bad
 
 Bad setups should feel obviously bad to the reader.
-Good setups should still be treated cautiously.`;
+Good setups should still be treated cautiously.
+
+EVIDENCE BOUNDARY RULES:
+
+- Only make claims that are directly supported by the provided token data.
+- Never invent facts that are not present in the input.
+- Never guess creator reputation unless explicit creator-history data is provided.
+- Never claim strong or weak social backing unless explicit social metrics are provided.
+- Never describe wallet distribution unless holder/wallet data is explicitly present.
+- Never infer "Binance backing", "creator reputation", "clean track record", or similar unless the input explicitly contains that information.
+- If a datapoint is missing, say it is missing.
+- Prefer "unknown", "unclear", "not enough data", or "unverified" over fabricated certainty.
+
+DO NOT INVENT:
+- creator reputation
+- wallet distribution
+- social strength
+- holder quality
+- narrative stickiness
+- liquidity depth quality
+- attention flow quality
+unless those are explicitly present in the input data.
+
+SOURCE AWARE WRITING RULES:
+
+- Every important sentence in TRADER READ, BULL CASE, and BEAR CASE must be traceable to an input signal.
+- If a sentence cannot be justified by the input data, remove or rewrite it.
+- If social metrics are missing, say social quality is unclear or unverified.
+- If holder data is missing, say holder quality is unknown.
+- If creator history is missing, say creator quality is unverified.
+- If narrative evidence is weak, say narrative strength is still unclear.`;
 
 export async function analyzeWithSakura(rawInput: string): Promise<SakuraResult> {
   const lookup = await lookupCa(rawInput);
+  const evidence = buildEvidenceContext(lookup);
   const heuristic = buildHeuristicResult(lookup);
   const hfKey = process.env.HF_API_KEY?.trim();
   const model = process.env.HF_MODEL?.trim() || DEFAULT_HF_MODEL;
 
   if (!hfKey) {
-    return heuristic;
+    return buildRuntimeResult(
+      postProcessPayload(heuristic, lookup.summary.name, lookup.summary.symbol, lookup.tokenAddress, evidence),
+      heuristic.engine,
+      heuristic.model,
+      heuristic,
+    );
   }
 
   try {
-    const payload = await requestHuggingFaceAnalysis(hfKey, model, lookup, heuristic);
+    const payload = await requestHuggingFaceAnalysis(hfKey, model, lookup, heuristic, evidence);
     if (!payload) {
-      return heuristic;
+      return buildRuntimeResult(
+        postProcessPayload(heuristic, lookup.summary.name, lookup.summary.symbol, lookup.tokenAddress, evidence),
+        heuristic.engine,
+        heuristic.model,
+        heuristic,
+      );
     }
 
-    return buildRuntimeResult(payload, "huggingface", model, heuristic);
+    return buildRuntimeResult(
+      postProcessPayload(payload, lookup.summary.name, lookup.summary.symbol, lookup.tokenAddress, evidence),
+      "huggingface",
+      model,
+      heuristic,
+    );
   } catch (error) {
     console.error("[sakura:hf] runtime failure", error instanceof Error ? error.message : error);
-    return heuristic;
+    return buildRuntimeResult(
+      postProcessPayload(heuristic, lookup.summary.name, lookup.summary.symbol, lookup.tokenAddress, evidence),
+      heuristic.engine,
+      heuristic.model,
+      heuristic,
+    );
   }
 }
 
@@ -315,6 +392,7 @@ async function requestHuggingFaceAnalysis(
   model: string,
   lookup: Awaited<ReturnType<typeof lookupCa>>,
   heuristic: SakuraResult,
+  evidence: SakuraEvidenceContext,
 ): Promise<ParsedSakuraPayload | null> {
   const response = await fetch("https://router.huggingface.co/v1/chat/completions", {
     method: "POST",
@@ -360,6 +438,33 @@ async function requestHuggingFaceAnalysis(
                       ? "watchlist"
                       : "mixed",
             },
+            availableSignals: {
+              tokenName: evidence.hasName,
+              ticker: evidence.hasSymbol,
+              creatorAddress: evidence.hasCreatorAddress,
+              websiteLink: evidence.hasWebsite,
+              twitterLink: evidence.hasTwitter,
+              telegramLink: evidence.hasTelegram,
+              socialLinkCount: evidence.socialLinkCount,
+              priceUsd: evidence.hasPrice,
+              liquidityUsd: evidence.hasLiquidity,
+              marketCap: evidence.hasMarketCap,
+              fdv: evidence.hasFdv,
+              pairData: evidence.hasPair,
+              launchTime: evidence.hasLaunchTime,
+              raisedBnb: evidence.hasRaisedBnb,
+              maxRaisedBnb: evidence.hasMaxRaisedBnb,
+              tradingFeeRate: evidence.hasTradingFeeRate,
+              liquidityAdded: evidence.liquidityAdded,
+            },
+            missingSignals: [
+              "creator history",
+              "holder distribution",
+              "wallet quality",
+              "verified social metrics",
+              "attention flow metrics",
+              "narrative metrics",
+            ],
           }),
         },
       ],
@@ -514,6 +619,7 @@ function buildHeuristicResult(lookup: Awaited<ReturnType<typeof lookupCa>>): Sak
       lookup.summary.name,
       lookup.summary.symbol,
       lookup.tokenAddress,
+      buildEvidenceContext(lookup),
     ),
     "heuristic",
     null,
@@ -629,9 +735,9 @@ function buildTraderRead(
   ];
 
   const socialReads = [
-    "The social shell is active enough to keep this in rotation if the story keeps landing.",
-    "There is enough social proof to keep eyes on it, which matters if the tape stays responsive.",
-    "The audience side is doing enough work that this can stay in play a little longer.",
+    "Public links are present, but social quality is still unverified.",
+    "There are social links to check, though real backing is still unclear from this input.",
+    "There is at least a surface social footprint, but not enough data to call it strong.",
   ];
   const stretchedReads = [
     "The ratio already looks stretched, which is where late buyers usually get punished.",
@@ -639,9 +745,9 @@ function buildTraderRead(
     "The move already feels extended enough that chasing here can turn into donation flow.",
   ];
   const thinReads = [
-    "The social side still feels thin, so this stays in watchlist territory until it proves more.",
-    "There is not enough support around it yet, which makes this a stalk-not-chase setup.",
-    "It still needs a better support layer before this deserves real trust.",
+    "Social quality is unclear from the current input, so this stays in watchlist territory.",
+    "There is not enough verified social evidence here to upgrade the read.",
+    "Public support is still unverified, which keeps this in stalk-not-chase mode.",
   ];
 
   const first = verdict === "bullish" ? pickVariant(bullishOpeners, seed) : pickVariant(bearishOpeners, seed);
@@ -662,8 +768,8 @@ function buildBullCase(lookup: Awaited<ReturnType<typeof lookupCa>>, scores: Sak
       pickVariant(
         [
           "The meme packaging is strong enough to pull attention quickly.",
-          "The concept is sticky enough to get picked up without much explanation.",
-          "The meme side has enough snap to keep this circulating.",
+          "The name and ticker are readable enough to give the branding a chance.",
+          "The branding is clear enough that traders will understand the pitch fast.",
         ],
         seed,
       ),
@@ -674,8 +780,8 @@ function buildBullCase(lookup: Awaited<ReturnType<typeof lookupCa>>, scores: Sak
       pickVariant(
         [
           "The social layer is built enough to support a rotation if buyers lean in.",
-          "The social setup gives this a chance to hold attention past the first impulse.",
-          "The community shell is decent enough that this does not die on first contact.",
+          "There are public links to inspect, which is better than a blank shell.",
+          "There is at least a visible social footprint, even if quality is still unverified.",
         ],
         seed + 1,
       ),
@@ -698,8 +804,8 @@ function buildBullCase(lookup: Awaited<ReturnType<typeof lookupCa>>, scores: Sak
       pickVariant(
         [
           "This can still catch a rotation if the sector bid keeps moving.",
-          "There is enough here for a rotation attempt before it gets stale.",
-          "This still has room to catch another wave if attention rolls back in.",
+          "Market cap and liquidity are in a range that can still move if interest appears.",
+          "This still sits in a size range where rotation can happen if bids show up.",
         ],
         seed + 3,
       ),
@@ -751,8 +857,8 @@ function buildBearCase(lookup: Awaited<ReturnType<typeof lookupCa>>, scores: Sak
       pickVariant(
         [
           "The social layer is thin, which makes attention fragile.",
-          "There is not much support around the story yet, so attention can disappear fast.",
-          "The social side still looks light, and that usually makes the move brittle.",
+          "There are not enough visible social links to judge support with confidence.",
+          "Public presence is limited, so social quality stays unverified.",
         ],
         seed + 2,
       ),
@@ -888,12 +994,17 @@ function postProcessPayload(
   tokenName?: string | null,
   tokenSymbol?: string | null,
   tokenAddress?: string | null,
+  evidence?: SakuraEvidenceContext,
 ): ParsedSakuraPayload {
   const seed = buildVariationSeed(tokenAddress || `${tokenName || ""}${tokenSymbol || ""}`);
-  const verdictLine = applyVariationPass(stripLeadingTokenReference(payload.verdictLine, tokenName, tokenSymbol), seed);
+  const verdictLine = enforceEvidenceBoundary(
+    applyVariationPass(stripLeadingTokenReference(payload.verdictLine, tokenName, tokenSymbol), seed),
+    evidence,
+  );
   const traderRead = compressTraderRead(
     payload.traderRead.map((line) => stripLeadingTokenReference(line, tokenName, tokenSymbol)),
     seed,
+    evidence,
   );
 
   const bullCase = compressCaseLines(
@@ -902,6 +1013,7 @@ function postProcessPayload(
     payload.verdict,
     payload.scores,
     seed + 11,
+    evidence,
   );
   const bearCase = compressCaseLines(
     payload.bearCase.map((line) => stripLeadingTokenReference(line, tokenName, tokenSymbol)),
@@ -909,13 +1021,12 @@ function postProcessPayload(
     payload.verdict,
     payload.scores,
     seed + 23,
+    evidence,
   );
-  const finalLine = tightenFinalLine(
-    stripLeadingTokenReference(payload.finalLine, tokenName, tokenSymbol),
-    payload.verdict,
-    payload.scores,
-    seed,
-  );
+  const rawFinalLine = stripLeadingTokenReference(payload.finalLine, tokenName, tokenSymbol);
+  const finalLine = sentenceNeedsEvidenceDowngrade(rawFinalLine, evidence)
+    ? deriveFinalLine(payload.verdict, payload.scores, seed)
+    : tightenFinalLine(rawFinalLine, payload.verdict, payload.scores, seed);
 
   return {
     ...payload,
@@ -927,13 +1038,13 @@ function postProcessPayload(
   };
 }
 
-function compressTraderRead(lines: string[], seed: number): string[] {
+function compressTraderRead(lines: string[], seed: number, evidence?: SakuraEvidenceContext): string[] {
   const normalized = dedupeLines(lines.map((line) => applyVariationPass(line, seed)), seed, 4);
   const output: string[] = [];
   const localTopics = new Set<string>();
 
   for (const line of normalized) {
-    const tightened = tightenSentence(line);
+    const tightened = enforceEvidenceBoundary(tightenSentence(line), evidence);
     if (!tightened) continue;
     const key = classifyIdea(tightened);
     if (localTopics.has(key)) continue;
@@ -951,12 +1062,13 @@ function compressCaseLines(
   verdict: SakuraVerdict,
   scores: SakuraScores,
   seed: number,
+  evidence?: SakuraEvidenceContext,
 ): string[] {
   const prepared = dedupeLines(lines, seed, 5);
   const output: string[] = [];
 
   for (const line of prepared) {
-    const tightened = tightenSentence(line);
+    const tightened = enforceEvidenceBoundary(tightenSentence(line), evidence);
     if (!tightened) continue;
     if (mode === "bull" && (verdict === "bearish" || scores.tradeability <= 4) && looksOvereagerBullLine(tightened)) {
       continue;
@@ -1129,6 +1241,73 @@ function paraphraseTemplateLine(value: string, seed: number): string {
 
 function looksOvereagerBullLine(value: string): boolean {
   return /\b(send|rip|explod|fly|easy money|ape|moon)\b/i.test(value);
+}
+
+function buildEvidenceContext(lookup: Awaited<ReturnType<typeof lookupCa>>): SakuraEvidenceContext {
+  return {
+    hasName: Boolean(lookup.summary.name),
+    hasSymbol: Boolean(lookup.summary.symbol),
+    hasCreatorAddress: Boolean(lookup.summary.creator),
+    hasWebsite: Boolean(lookup.summary.website),
+    hasTwitter: Boolean(lookup.summary.twitter),
+    hasTelegram: Boolean(lookup.summary.telegram),
+    socialLinkCount: [lookup.summary.website, lookup.summary.twitter, lookup.summary.telegram].filter(Boolean).length,
+    hasPrice: Number(lookup.dexScreener?.priceUsd || 0) > 0,
+    hasLiquidity: Number(lookup.dexScreener?.liquidityUsd || 0) > 0,
+    hasMarketCap: Number(lookup.dexScreener?.marketCap || 0) > 0,
+    hasFdv: Number(lookup.dexScreener?.fdv || 0) > 0,
+    hasPair: Boolean(lookup.dexScreener?.pairAddress),
+    hasLaunchTime: Boolean(lookup.summary.launchTime),
+    hasRaisedBnb: Number(lookup.summary.raisedBnb || 0) > 0,
+    hasMaxRaisedBnb: Number(lookup.summary.maxRaisedBnb || 0) > 0,
+    hasTradingFeeRate: Number(lookup.summary.tradingFeeRate || 0) >= 0,
+    liquidityAdded: Boolean(lookup.summary.liquidityAdded),
+    hasCreatorHistory: false,
+    hasHolderData: false,
+    hasWalletDistribution: false,
+    hasSocialMetrics: false,
+    hasNarrativeMetrics: false,
+    hasAttentionMetrics: false,
+  };
+}
+
+function enforceEvidenceBoundary(value: string, evidence?: SakuraEvidenceContext): string {
+  const sentence = cleanSentence(value);
+  if (!sentence) return "";
+  if (!evidence) return sentence;
+
+  if (/\b(binance backing|backed by binance|clean track record|creator has|creator history|reputable creator)\b/i.test(sentence)) {
+    return "Creator quality is unverified.";
+  }
+
+  if (!evidence.hasHolderData && /\b(holder|holders|wallet distribution|distribution|wallet quality|holder quality|bundled wallets|sniper)\b/i.test(sentence)) {
+    return "No verified holder data yet.";
+  }
+
+  if (!evidence.hasSocialMetrics && /\b(strong social|weak social|social backing|community support|community shell|social proof|audience side|attention from socials)\b/i.test(sentence)) {
+    return evidence.socialLinkCount > 0
+      ? "Social links are present, but social quality is still unverified."
+      : "Social strength is unclear from the current input.";
+  }
+
+  if (!evidence.hasNarrativeMetrics && /\b(narrative strength|narrative is strong|sticky narrative|meme strength is strong|story is landing)\b/i.test(sentence)) {
+    return "Narrative strength is still unclear.";
+  }
+
+  if (!evidence.hasAttentionMetrics && /\b(attention flow|crowd is here|crowded already|attention is strong|attention sticks)\b/i.test(sentence)) {
+    return "Attention quality is unverified from the current input.";
+  }
+
+  if (!evidence.hasLiquidity && /\b(liquidity depth|deep liquidity|liquidity is strong|liquidity is weak)\b/i.test(sentence)) {
+    return "Liquidity quality is unclear from current data.";
+  }
+
+  return sentence;
+}
+
+function sentenceNeedsEvidenceDowngrade(value: string, evidence?: SakuraEvidenceContext): boolean {
+  if (!evidence) return false;
+  return enforceEvidenceBoundary(value, evidence) !== cleanSentence(value);
 }
 
 function deriveFinalLine(verdict: SakuraVerdict, scores: SakuraScores, seed = 0): string {
