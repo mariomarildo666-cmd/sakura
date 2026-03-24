@@ -1,4 +1,4 @@
-import { createHmac, randomBytes } from "node:crypto";
+﻿import { createHmac, randomBytes } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -141,15 +141,28 @@ export async function processMentionsOnce() {
       continue;
     }
 
+    console.log("mention text received", mention.text);
+
     const contractAddress = extractContractAddress(mention.text);
-    const launchCommand = parseLaunchCommandStrict(mention.text);
+    const launchCommand = parseLaunchCommand(mention.text);
 
     if (launchCommand) {
+      console.log("parsed command", launchCommand);
+      console.log("launch mode", config.dryRun ? "dry-run" : "live");
+      console.log("launch request payload", {
+        name: launchCommand.name,
+        shortName: launchCommand.shortName,
+        desc: launchCommand.desc || null,
+        webUrl: launchCommand.webUrl || null,
+        twitterUrl: launchCommand.twitterUrl || null,
+        telegramUrl: launchCommand.telegramUrl || null,
+      });
       try {
         const launch = await launchTokenFromRequest({
           ...launchCommand,
           dryRun: config.dryRun,
         });
+        console.log("launch result", launch);
         const replyText = composeLaunchReplyText(launch, mention.author?.username || "anon");
 
         if (config.dryRun) {
@@ -179,7 +192,12 @@ export async function processMentionsOnce() {
         });
         continue;
       } catch (error) {
+        console.log("launch result", {
+          ok: false,
+          error: error instanceof Error ? error.message : "launch failed",
+        });
         const failureText = composeLaunchFailureReplyText(
+          launchCommand.shortName,
           error instanceof Error ? error.message : "launch failed",
           mention.author?.username || "anon",
         );
@@ -469,13 +487,13 @@ function composeReplyText(
 
   const chunks = [
     `@${trimUsername(requesterUsername)} Sakura read: ${verdict}`,
-    `${truncateSafe(name, 34)}${truncateSafe(symbol, 12)}`,
-    truncateSafe(summary, 110),
-    `Why: ${truncateSafe(why, 72)}`,
+    `${truncate(name, 34)}${truncate(symbol, 12)}`,
+    truncate(summary, 110),
+    `Why: ${truncate(why, 72)}`,
     `CA: ${lookup.tokenAddress}`,
   ];
 
-  return fitTweetSafe(chunks, 280);
+  return fitTweet(chunks, 280);
 }
 
 function fitTweet(chunks: string[], limit: number) {
@@ -494,7 +512,7 @@ function fitTweet(chunks: string[], limit: number) {
   lines[lines.length - 1] = truncate(last, Math.max(0, last.length - overflow));
   text = lines.join("\n");
 
-  return text.length > limit ? text.slice(0, limit - 3).trimEnd() + "..." : text;
+  return text.length > limit ? text.slice(0, Math.max(0, limit - 3)).trimEnd() + "..." : text;
 }
 
 function trimUsername(username: string) {
@@ -503,7 +521,7 @@ function trimUsername(username: string) {
 
 function truncate(value: string, maxLength: number) {
   if (value.length <= maxLength) return value;
-  return value.slice(0, Math.max(0, maxLength - 1)).trimEnd() + "…";
+  return value.slice(0, Math.max(0, maxLength - 3)).trimEnd() + "...";
 }
 
 function normalizeSentence(value: string) {
@@ -528,7 +546,16 @@ function parseLaunchCommand(text: string): LaunchCommand | null {
     return null;
   }
 
-  const fields = extractLaunchFields(text);
+  const simpleFields = captureSimpleDeployFields(text);
+  const fields = {
+    name: captureField(text, ["name", "isim"]) ?? captureQuotedValueAfterCommand(text) ?? simpleFields?.name ?? null,
+    ticker: captureField(text, ["ticker", "symbol"]) ?? captureTickerToken(text) ?? simpleFields?.ticker ?? null,
+    desc: captureField(text, ["desc", "description", "aciklama"]),
+    website: captureField(text, ["website", "web"]),
+    twitter: captureField(text, ["twitter", "x"]),
+    telegram: captureField(text, ["telegram", "tg"]),
+  };
+
   const ticker = fields.ticker?.trim().toUpperCase();
   const name = fields.name?.trim();
 
@@ -551,17 +578,6 @@ function parseLaunchCommand(text: string): LaunchCommand | null {
   };
 }
 
-function extractLaunchFields(text: string) {
-  return {
-    name: captureField(text, ["name", "isim"]) ?? captureQuotedValueAfterCommand(text),
-    ticker: captureField(text, ["ticker", "symbol"]) ?? captureTickerToken(text),
-    desc: captureField(text, ["desc", "description", "aciklama"]),
-    website: captureField(text, ["website", "web"]),
-    twitter: captureField(text, ["twitter", "x"]),
-    telegram: captureField(text, ["telegram", "tg"]),
-  };
-}
-
 function captureField(text: string, keys: string[]) {
   for (const key of keys) {
     const match = text.match(new RegExp(`${escapeRegex(key)}\\s*[:=-]\\s*([^\\n,]+)`, "i"));
@@ -569,6 +585,7 @@ function captureField(text: string, keys: string[]) {
       return sanitizeFieldValue(match[1]);
     }
   }
+
   return null;
 }
 
@@ -582,6 +599,25 @@ function captureTickerToken(text: string) {
   return match?.[1] || null;
 }
 
+function captureSimpleDeployFields(text: string) {
+  const stripped = text
+    .replace(/@\w+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const match = stripped.match(/(?:^|\s)(?:deploy|launch|create|çıkar|cikar)\s+(.+?)\s+([A-Za-z0-9]{2,12})(?:\s|$)/i);
+  if (!match?.[1] || !match?.[2]) {
+    return null;
+  }
+
+  const name = sanitizeFieldValue(match[1]).replace(/\s+/g, " ").trim();
+  const ticker = match[2].trim();
+  if (!name || !ticker) {
+    return null;
+  }
+
+  return { name, ticker };
+}
+
 function sanitizeFieldValue(value: string) {
   return value.replace(/^["“]|["”]$/g, "").trim();
 }
@@ -590,126 +626,34 @@ function composeLaunchReplyText(
   launch: Awaited<ReturnType<typeof launchTokenFromRequest>>,
   requesterUsername: string,
 ) {
-  const lines = [
-    `@${trimUsername(requesterUsername)} Sakura launch ready: ${truncateSafe(launch.name, 28)} ($${launch.shortName})`,
-    launch.tokenPageUrl ? `Four.meme: ${launch.tokenPageUrl}` : `Launch queued. Dry run: ${launch.dryRun ? "yes" : "no"}`,
-  ];
+  if (launch.dryRun) {
+    return fitTweet([`@${trimUsername(requesterUsername)} Dry run only: would launch ${launch.name} (${launch.shortName})`], 280);
+  }
+
+  const lines = [`@${trimUsername(requesterUsername)} Launch started for ${launch.shortName}.`];
+
+  if (launch.tokenPageUrl) {
+    lines.push(`Four.meme: ${launch.tokenPageUrl}`);
+  }
 
   if (launch.txHash) {
     lines.push(`TX: https://bscscan.com/tx/${launch.txHash}`);
-  } else if (launch.dryRun) {
-    lines.push("Dry run only. Flip X_BOT_DRY_RUN=false for live launch.");
   }
 
-  return fitTweetSafe(lines, 280);
+  return fitTweet(lines, 280);
 }
 
-function composeLaunchFailureReplyText(message: string, requesterUsername: string) {
+function composeLaunchFailureReplyText(shortName: string, message: string, requesterUsername: string) {
   const normalized = message
     .replace(/\s+/g, " ")
     .replace(/^Four\.meme API error on [^:]+:\s*/i, "")
     .trim();
 
   return fitTweet(
-    [
-      `@${trimUsername(requesterUsername)} Sakura could not launch that token.`,
-      `Why: ${truncateSafe(normalized || "Missing or invalid launch fields.", 160)}`,
-      "Use: launch name: <name> ticker: <ticker>",
-    ],
+    [`@${trimUsername(requesterUsername)} Launch failed for ${shortName}: ${truncate(normalized || "Missing or invalid launch fields.", 160)}`],
     280,
   );
 }
-
-function fitTweetSafe(chunks: string[], limit: number) {
-  let lines = [...chunks];
-  while (lines.join("\n").length > limit && lines.length > 3) {
-    lines.pop();
-  }
-
-  let text = lines.join("\n");
-  if (text.length <= limit) {
-    return text;
-  }
-
-  const overflow = text.length - limit + 1;
-  const last = lines[lines.length - 1] || "";
-  lines[lines.length - 1] = truncateSafe(last, Math.max(0, last.length - overflow));
-  text = lines.join("\n");
-
-  return text.length > limit ? text.slice(0, Math.max(0, limit - 3)).trimEnd() + "..." : text;
-}
-
-function truncateSafe(value: string, maxLength: number) {
-  if (value.length <= maxLength) return value;
-  return value.slice(0, Math.max(0, maxLength - 3)).trimEnd() + "...";
-}
-
-function parseLaunchCommandStrict(text: string): LaunchCommand | null {
-  const lowered = text.toLowerCase();
-  const hasLaunchVerb =
-    lowered.includes("launch") ||
-    lowered.includes("create") ||
-    lowered.includes("deploy") ||
-    lowered.includes("çıkar") ||
-    lowered.includes("cikar");
-
-  if (!hasLaunchVerb) {
-    return null;
-  }
-
-  const fields = extractLaunchFieldsStrict(text);
-  const ticker = fields.ticker?.trim().toUpperCase();
-  const name = fields.name?.trim();
-
-  if (!name || !ticker) {
-    return null;
-  }
-
-  const normalizedName = name.replace(/\s+/g, " ").trim();
-  if (normalizedName.length < 2 || normalizedName.length > 48) {
-    return null;
-  }
-
-  return {
-    name: normalizedName,
-    shortName: ticker,
-    ...(fields.desc ? { desc: fields.desc.trim() } : {}),
-    ...(fields.website ? { webUrl: fields.website.trim() } : {}),
-    ...(fields.twitter ? { twitterUrl: fields.twitter.trim() } : {}),
-    ...(fields.telegram ? { telegramUrl: fields.telegram.trim() } : {}),
-  };
-}
-
-function extractLaunchFieldsStrict(text: string) {
-  return {
-    name: captureFieldStrict(text, ["name", "isim"]) ?? captureQuotedValueAfterCommandStrict(text),
-    ticker: captureFieldStrict(text, ["ticker", "symbol"]) ?? captureTickerToken(text),
-    desc: captureFieldStrict(text, ["desc", "description", "aciklama"]),
-    website: captureFieldStrict(text, ["website", "web"]),
-    twitter: captureFieldStrict(text, ["twitter", "x"]),
-    telegram: captureFieldStrict(text, ["telegram", "tg"]),
-  };
-}
-
-function captureFieldStrict(text: string, keys: string[]) {
-  for (const key of keys) {
-    const match = text.match(new RegExp(`${escapeRegex(key)}\\s*[:=-]\\s*([^\\n,]+)`, "i"));
-    if (match?.[1]) {
-      return sanitizeFieldValueStrict(match[1]);
-    }
-  }
-  return null;
-}
-
-function captureQuotedValueAfterCommandStrict(text: string) {
-  const match = text.match(/(?:launch|create|deploy|çıkar|cikar)\s+["“]([^"”]{2,48})["”]/i);
-  return match?.[1] ? sanitizeFieldValueStrict(match[1]) : null;
-}
-
-function sanitizeFieldValueStrict(value: string) {
-  return value.replace(/^["“]|["”]$/g, "").trim();
-}
-
 function buildOAuthHeader(
   method: string,
   rawUrl: string,
