@@ -57,7 +57,7 @@ The web app currently includes:
 - raw payload inspector
 - recent searches visible to all visitors on the running service
 - X mention bot hooks for `@sakuraonbsc 0x...` style replies
-- X mention launch hooks for `@sakuraonbsc launch name: ... ticker: ...`
+- X mention launch hooks for `@sakuraonbsc deploy NAME + TICKER`
 
 ## Stack
 
@@ -149,8 +149,7 @@ npm run x-bot -- poll
 Launch by mention:
 
 ```text
-@sakuraonbsc launch name: Siren ticker: SIREN
-@sakuraonbsc bu coini çıkar isim: Siren ticker: SIREN
+@sakuraonbsc deploy Siren + SIREN
 ```
 
 Open:
@@ -265,3 +264,4 @@ src/lib/x-bot.ts         X auth, mention polling, and reply posting
 Sakura does not do polite research.
 Sakura reads the coin, judges the vibe, and tells you if it feels shillable.
 ```
+
