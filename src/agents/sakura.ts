@@ -676,24 +676,23 @@ function postProcessPayload(
 ): ParsedSakuraPayload {
   const seen = new Set<string>();
   const verdictLine = stripLeadingTokenReference(payload.verdictLine, tokenName, tokenSymbol);
-  const traderRead = dedupeLines(
+  const traderRead = compressTraderRead(
     payload.traderRead.map((line) => stripLeadingTokenReference(line, tokenName, tokenSymbol)),
     seen,
-    2,
   );
 
   const bullCeiling = payload.verdict === "bearish" || payload.scores.tradeability <= 4 ? 3 : 5;
   const bullCase = dedupeLines(
     payload.bullCase.map((line) => stripLeadingTokenReference(line, tokenName, tokenSymbol)),
     seen,
-    bullCeiling,
+    Math.min(3, bullCeiling),
   );
   const bearCase = dedupeLines(
     payload.bearCase.map((line) => stripLeadingTokenReference(line, tokenName, tokenSymbol)),
     seen,
-    5,
+    3,
   );
-  const finalLine = stripLeadingTokenReference(payload.finalLine, tokenName, tokenSymbol);
+  const finalLine = tightenFinalLine(stripLeadingTokenReference(payload.finalLine, tokenName, tokenSymbol), payload.verdict, payload.scores);
 
   return {
     ...payload,
@@ -705,15 +704,35 @@ function postProcessPayload(
   };
 }
 
+function compressTraderRead(lines: string[], seen: Set<string>): string[] {
+  const normalized = dedupeLines(lines.map(strengthenLanguage), seen, 4);
+  const output: string[] = [];
+
+  for (const line of normalized) {
+    const tightened = tightenSentence(line);
+    if (!tightened) continue;
+    const key = classifyIdea(tightened);
+    if (output.some((item) => classifyIdea(item) === key)) continue;
+    output.push(tightened);
+    if (output.length >= 2) break;
+  }
+
+  return output;
+}
+
 function dedupeLines(lines: string[], seen: Set<string>, limit: number): string[] {
   const output: string[] = [];
-  for (const raw of lines) {
-    const line = cleanSentence(raw);
+  const ranked = lines
+    .map((raw) => strengthenLanguage(cleanSentence(raw)))
+    .filter(Boolean)
+    .sort((left, right) => scoreSentenceStrength(right) - scoreSentenceStrength(left));
+
+  for (const line of ranked) {
     if (!line) continue;
     const key = normalizeIdeaKey(line);
     if (seen.has(key)) continue;
     seen.add(key);
-    output.push(line);
+    output.push(tightenSentence(line));
     if (output.length >= limit) break;
   }
   return output;
@@ -736,6 +755,66 @@ function stripLeadingTokenReference(value: string, tokenName?: string | null, to
     next = next.replace(new RegExp(`^${escaped}\\s*[:,-]?\\s*`, "i"), "");
   }
   return next;
+}
+
+function strengthenLanguage(value: string): string {
+  return value
+    .replace(/\brespectable\b/gi, "decent but not clean")
+    .replace(/\bat least present\b/gi, "thin but usable")
+    .replace(/\bmay exist\b/gi, "is there")
+    .replace(/\bgood enough to support a rotation if buyers show up\b/gi, "just enough to matter if buyers show up")
+    .replace(/\bthere is enough structure here to treat it as tradable, not just noise\b/gi, "there is enough structure here to trade, not just stare at")
+    .replace(/\blaunch quality is respectable for a bsc meme setup\b/gi, "launch quality is decent but not clean")
+    .replace(/\benough attention here to keep it on radar\b/gi, "enough attention here to keep it on the watchlist")
+    .replace(/\blate buyers can get clipped fast here\b/gi, "late buyers can get farmed here")
+    .replace(/\bthis has room to be stalked as a rotation candidate instead of ignored\b/gi, "this is stalkable if rotation comes through")
+    .replace(/\bsocial shell is good enough to support a rotation if buyers show up\b/gi, "social shell is thin but usable if buyers show up");
+}
+
+function tightenSentence(value: string): string {
+  return value
+    .replace(/\bthat matters on bsc, because\b/gi, "")
+    .replace(/\bit is probably\b/gi, "it is")
+    .replace(/\bthere is\b/gi, "there's")
+    .replace(/\s+/g, " ")
+    .replace(/\s+\./g, ".")
+    .trim();
+}
+
+function scoreSentenceStrength(value: string): number {
+  let score = value.split(" ").length;
+  if (/\bnot enough structure to trust\b/i.test(value)) score += 5;
+  if (/\blate buyers can get farmed\b/i.test(value)) score += 5;
+  if (/\bwatchlist material, not chase material\b/i.test(value)) score += 4;
+  if (/\benough attention to matter\b/i.test(value)) score += 3;
+  if (/\bdecent but not clean\b/i.test(value)) score += 2;
+  return score;
+}
+
+function classifyIdea(value: string): string {
+  const lowered = value.toLowerCase();
+  if (lowered.includes("attention")) return "attention";
+  if (lowered.includes("structure")) return "structure";
+  if (lowered.includes("watchlist") || lowered.includes("chase")) return "chase";
+  if (lowered.includes("late buyers") || lowered.includes("farmed") || lowered.includes("exit")) return "exit-risk";
+  if (lowered.includes("social")) return "social";
+  if (lowered.includes("launch")) return "launch";
+  if (lowered.includes("rotation")) return "rotation";
+  return normalizeIdeaKey(value);
+}
+
+function tightenFinalLine(value: string, verdict: SakuraVerdict, scores: SakuraScores): string {
+  const cleaned = strengthenLanguage(cleanSentence(value));
+  const words = cleaned.split(/\s+/).filter(Boolean);
+  if (words.length <= 12) {
+    return cleaned;
+  }
+
+  if (verdict === "bullish") {
+    return scores.tradeability >= 7 ? "Good enough to trade. Not good enough to trust." : "Watch it first. Let it earn the chase.";
+  }
+
+  return scores.exitLiquidityRisk >= 7 ? "Looks crowded. Let someone else pay the exit." : "Watchlist only. Not clean enough to trust.";
 }
 
 function escapeRegExp(value: string): string {
