@@ -54,6 +54,10 @@ type ProcessedMention = {
 type LaunchCommand = {
   name: string;
   shortName: string;
+  desc?: string;
+  webUrl?: string;
+  twitterUrl?: string;
+  telegramUrl?: string;
 };
 
 type ProcessMentionsResult = {
@@ -138,7 +142,7 @@ export async function processMentionsOnce() {
     }
 
     const contractAddress = extractContractAddress(mention.text);
-    const launchCommand = parseLaunchCommand(mention.text);
+    const launchCommand = parseLaunchCommandStrict(mention.text);
 
     if (launchCommand) {
       try {
@@ -175,14 +179,26 @@ export async function processMentionsOnce() {
         });
         continue;
       } catch (error) {
+        const failureText = composeLaunchFailureReplyText(
+          error instanceof Error ? error.message : "launch failed",
+          mention.author?.username || "anon",
+        );
+
+        let replyTweetId: string | null = null;
+        if (!config.dryRun) {
+          try {
+            replyTweetId = await postReply(config, mention.id, failureText);
+          } catch {}
+        }
+
         processed.add(mention.id);
         results.push({
           mentionId: mention.id,
           authorUsername: mention.author?.username || null,
           contractAddress: null,
           status: "failed",
-          replyText: null,
-          replyTweetId: null,
+          replyText: failureText,
+          replyTweetId,
           note: error instanceof Error ? error.message : "launch failed",
         });
         continue;
@@ -453,13 +469,13 @@ function composeReplyText(
 
   const chunks = [
     `@${trimUsername(requesterUsername)} Sakura read: ${verdict}`,
-    `${truncate(name, 34)}${truncate(symbol, 12)}`,
-    truncate(summary, 110),
-    `Why: ${truncate(why, 72)}`,
+    `${truncateSafe(name, 34)}${truncateSafe(symbol, 12)}`,
+    truncateSafe(summary, 110),
+    `Why: ${truncateSafe(why, 72)}`,
     `CA: ${lookup.tokenAddress}`,
   ];
 
-  return fitTweet(chunks, 280);
+  return fitTweetSafe(chunks, 280);
 }
 
 function fitTweet(chunks: string[], limit: number) {
@@ -478,7 +494,7 @@ function fitTweet(chunks: string[], limit: number) {
   lines[lines.length - 1] = truncate(last, Math.max(0, last.length - overflow));
   text = lines.join("\n");
 
-  return text.length > limit ? text.slice(0, limit - 1).trimEnd() + "…" : text;
+  return text.length > limit ? text.slice(0, limit - 3).trimEnd() + "..." : text;
 }
 
 function trimUsername(username: string) {
@@ -512,39 +528,62 @@ function parseLaunchCommand(text: string): LaunchCommand | null {
     return null;
   }
 
-  const tickerMatch =
-    text.match(/(?:ticker|symbol)\s*[:=-]\s*\$?([A-Za-z0-9]{2,12})/i) ||
-    text.match(/\$([A-Za-z0-9]{2,12})/);
-
-  const nameMatch =
-    text.match(/(?:name|isim)\s*[:=-]\s*["“]?([A-Za-z0-9\u00C0-\u024F\u0400-\u04FF\u0600-\u06FF\u3040-\u30ff\u3400-\u9fff _-]{2,48})["”]?/i) ||
-    text.match(/["“]([^"”]{2,48})["”]/);
-
-  const ticker = tickerMatch?.[1]?.trim().toUpperCase();
-  let name = nameMatch?.[1]?.trim();
-
-  if (!name && ticker) {
-    const between =
-      text.match(/(?:launch|create|deploy|çıkar|cikar)\s+(.+?)(?:\s+(?:ticker|symbol)\s*[:=-]|\s+\$[A-Za-z0-9]{2,12}|$)/i)?.[1]?.trim() ||
-      "";
-    if (between && !between.startsWith("@")) {
-      name = between.replace(/^["“]|["”]$/g, "").trim();
-    }
-  }
+  const fields = extractLaunchFields(text);
+  const ticker = fields.ticker?.trim().toUpperCase();
+  const name = fields.name?.trim();
 
   if (!name || !ticker) {
     return null;
   }
 
-  name = name.replace(/\s+/g, " ").trim();
-  if (name.length < 2 || name.length > 48) {
+  const normalizedName = name.replace(/\s+/g, " ").trim();
+  if (normalizedName.length < 2 || normalizedName.length > 48) {
     return null;
   }
 
   return {
-    name,
+    name: normalizedName,
     shortName: ticker,
+    ...(fields.desc ? { desc: fields.desc.trim() } : {}),
+    ...(fields.website ? { webUrl: fields.website.trim() } : {}),
+    ...(fields.twitter ? { twitterUrl: fields.twitter.trim() } : {}),
+    ...(fields.telegram ? { telegramUrl: fields.telegram.trim() } : {}),
   };
+}
+
+function extractLaunchFields(text: string) {
+  return {
+    name: captureField(text, ["name", "isim"]) ?? captureQuotedValueAfterCommand(text),
+    ticker: captureField(text, ["ticker", "symbol"]) ?? captureTickerToken(text),
+    desc: captureField(text, ["desc", "description", "aciklama"]),
+    website: captureField(text, ["website", "web"]),
+    twitter: captureField(text, ["twitter", "x"]),
+    telegram: captureField(text, ["telegram", "tg"]),
+  };
+}
+
+function captureField(text: string, keys: string[]) {
+  for (const key of keys) {
+    const match = text.match(new RegExp(`${escapeRegex(key)}\\s*[:=-]\\s*([^\\n,]+)`, "i"));
+    if (match?.[1]) {
+      return sanitizeFieldValue(match[1]);
+    }
+  }
+  return null;
+}
+
+function captureQuotedValueAfterCommand(text: string) {
+  const match = text.match(/(?:launch|create|deploy|çıkar|cikar)\s+["“]([^"”]{2,48})["”]/i);
+  return match?.[1] ? sanitizeFieldValue(match[1]) : null;
+}
+
+function captureTickerToken(text: string) {
+  const match = text.match(/\$([A-Za-z0-9]{2,12})/);
+  return match?.[1] || null;
+}
+
+function sanitizeFieldValue(value: string) {
+  return value.replace(/^["“]|["”]$/g, "").trim();
 }
 
 function composeLaunchReplyText(
@@ -552,7 +591,7 @@ function composeLaunchReplyText(
   requesterUsername: string,
 ) {
   const lines = [
-    `@${trimUsername(requesterUsername)} Sakura launch ready: ${truncate(launch.name, 28)} ($${launch.shortName})`,
+    `@${trimUsername(requesterUsername)} Sakura launch ready: ${truncateSafe(launch.name, 28)} ($${launch.shortName})`,
     launch.tokenPageUrl ? `Four.meme: ${launch.tokenPageUrl}` : `Launch queued. Dry run: ${launch.dryRun ? "yes" : "no"}`,
   ];
 
@@ -562,7 +601,113 @@ function composeLaunchReplyText(
     lines.push("Dry run only. Flip X_BOT_DRY_RUN=false for live launch.");
   }
 
-  return fitTweet(lines, 280);
+  return fitTweetSafe(lines, 280);
+}
+
+function composeLaunchFailureReplyText(message: string, requesterUsername: string) {
+  const normalized = message
+    .replace(/\s+/g, " ")
+    .replace(/^Four\.meme API error on [^:]+:\s*/i, "")
+    .trim();
+
+  return fitTweet(
+    [
+      `@${trimUsername(requesterUsername)} Sakura could not launch that token.`,
+      `Why: ${truncateSafe(normalized || "Missing or invalid launch fields.", 160)}`,
+      "Use: launch name: <name> ticker: <ticker>",
+    ],
+    280,
+  );
+}
+
+function fitTweetSafe(chunks: string[], limit: number) {
+  let lines = [...chunks];
+  while (lines.join("\n").length > limit && lines.length > 3) {
+    lines.pop();
+  }
+
+  let text = lines.join("\n");
+  if (text.length <= limit) {
+    return text;
+  }
+
+  const overflow = text.length - limit + 1;
+  const last = lines[lines.length - 1] || "";
+  lines[lines.length - 1] = truncateSafe(last, Math.max(0, last.length - overflow));
+  text = lines.join("\n");
+
+  return text.length > limit ? text.slice(0, Math.max(0, limit - 3)).trimEnd() + "..." : text;
+}
+
+function truncateSafe(value: string, maxLength: number) {
+  if (value.length <= maxLength) return value;
+  return value.slice(0, Math.max(0, maxLength - 3)).trimEnd() + "...";
+}
+
+function parseLaunchCommandStrict(text: string): LaunchCommand | null {
+  const lowered = text.toLowerCase();
+  const hasLaunchVerb =
+    lowered.includes("launch") ||
+    lowered.includes("create") ||
+    lowered.includes("deploy") ||
+    lowered.includes("çıkar") ||
+    lowered.includes("cikar");
+
+  if (!hasLaunchVerb) {
+    return null;
+  }
+
+  const fields = extractLaunchFieldsStrict(text);
+  const ticker = fields.ticker?.trim().toUpperCase();
+  const name = fields.name?.trim();
+
+  if (!name || !ticker) {
+    return null;
+  }
+
+  const normalizedName = name.replace(/\s+/g, " ").trim();
+  if (normalizedName.length < 2 || normalizedName.length > 48) {
+    return null;
+  }
+
+  return {
+    name: normalizedName,
+    shortName: ticker,
+    ...(fields.desc ? { desc: fields.desc.trim() } : {}),
+    ...(fields.website ? { webUrl: fields.website.trim() } : {}),
+    ...(fields.twitter ? { twitterUrl: fields.twitter.trim() } : {}),
+    ...(fields.telegram ? { telegramUrl: fields.telegram.trim() } : {}),
+  };
+}
+
+function extractLaunchFieldsStrict(text: string) {
+  return {
+    name: captureFieldStrict(text, ["name", "isim"]) ?? captureQuotedValueAfterCommandStrict(text),
+    ticker: captureFieldStrict(text, ["ticker", "symbol"]) ?? captureTickerToken(text),
+    desc: captureFieldStrict(text, ["desc", "description", "aciklama"]),
+    website: captureFieldStrict(text, ["website", "web"]),
+    twitter: captureFieldStrict(text, ["twitter", "x"]),
+    telegram: captureFieldStrict(text, ["telegram", "tg"]),
+  };
+}
+
+function captureFieldStrict(text: string, keys: string[]) {
+  for (const key of keys) {
+    const match = text.match(new RegExp(`${escapeRegex(key)}\\s*[:=-]\\s*([^\\n,]+)`, "i"));
+    if (match?.[1]) {
+      return sanitizeFieldValueStrict(match[1]);
+    }
+  }
+  return null;
+}
+
+function captureQuotedValueAfterCommandStrict(text: string) {
+  const match = text.match(/(?:launch|create|deploy|çıkar|cikar)\s+["“]([^"”]{2,48})["”]/i);
+  return match?.[1] ? sanitizeFieldValueStrict(match[1]) : null;
+}
+
+function sanitizeFieldValueStrict(value: string) {
+  return value.replace(/^["“]|["”]$/g, "").trim();
 }
 
 function buildOAuthHeader(
@@ -617,6 +762,10 @@ function percentEncode(value: string) {
     .replace(/'/g, "%27")
     .replace(/\(/g, "%28")
     .replace(/\)/g, "%29");
+}
+
+function escapeRegex(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function clampNumber(raw: string | undefined, fallback: number, min: number) {
