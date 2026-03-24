@@ -160,6 +160,7 @@ body:has(#result.hidden) .shell {
   pointer-events: none;
 }
 
+.hero-section,
 .hero-topbar,
 .hero-shell,
 .hero-history,
@@ -167,6 +168,12 @@ body:has(#result.hidden) .shell {
 #result {
   position: relative;
   z-index: 1;
+}
+
+.hero-section {
+  display: grid;
+  gap: 40px;
+  margin-bottom: 56px;
 }
 
 .side-rail {
@@ -570,7 +577,7 @@ body:has(#result.hidden) .shell {
 }
 
 .hero-history {
-  margin: 20px 8px 0 64px;
+  margin: 0 8px 0 64px;
   max-width: none;
   min-height: 0;
   padding: 18px 18px 16px;
@@ -579,6 +586,10 @@ body:has(#result.hidden) .shell {
   background: #fffdfd;
   backdrop-filter: blur(16px);
   box-shadow: var(--shadow-soft);
+}
+
+.hero-history-section {
+  width: auto;
 }
 
 .hero-history-head {
@@ -709,7 +720,7 @@ body:has(#result.hidden) .shell {
 
 .status {
   min-height: 24px;
-  margin: 12px 8px 0 64px;
+  margin: 16px 8px 0 64px;
   color: var(--muted-soft);
   font-size: 13px;
 }
@@ -1540,6 +1551,10 @@ body:has(#result.hidden) .shell {
     grid-template-columns: 1fr;
     gap: 24px;
     padding: 32px 0 0;
+  }
+
+  .hero-section {
+    margin-bottom: 48px;
   }
 
   .hero-copy {
