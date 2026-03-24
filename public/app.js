@@ -40,7 +40,6 @@ const chartLiquidity = document.querySelector("#chart-liquidity");
 const chartTrendChip = document.querySelector("#chart-trend-chip");
 const chartTimeframeChip = document.querySelector("#chart-timeframe-chip");
 const chartCandleChip = document.querySelector("#chart-candle-chip");
-const marketGrid = document.querySelector("#market-grid");
 
 let lastResult = null;
 let recentEntries = [];
@@ -54,14 +53,6 @@ let homepageInitialized = false;
 const tokenLogoFallback = document.createElement("div");
 tokenLogoFallback.className = "token-logo-fallback hidden";
 logoShell.appendChild(tokenLogoFallback);
-
-const marketFields = [
-  ["Raised BNB", "raisedBnb"],
-  ["Max Raised BNB", "maxRaisedBnb"],
-  ["Launch Time", "launchTime"],
-  ["Liquidity Added", "liquidityAdded"],
-  ["Trading Fee", "tradingFeeRate"],
-];
 
 initializeHomepage();
 
@@ -90,7 +81,6 @@ form.addEventListener("submit", async (event) => {
   chartStatus.classList.add("hidden");
   chartStatus.textContent = "";
   rawOutput.innerHTML = "";
-  marketGrid.innerHTML = "";
   sakuraShell.dataset.loadedFor = "";
   resetSummaryCards();
   resetSocialButtons();
@@ -168,11 +158,6 @@ async function renderResult(data) {
   setSocialButton(socialWebsite, data.summary?.website, "Website");
   setSocialButton(socialTwitter, data.summary?.twitter, "Twitter");
   setSocialButton(socialTelegram, data.summary?.telegram, "Telegram");
-
-  marketGrid.innerHTML = "";
-  for (const [label, key] of marketFields) {
-    marketGrid.appendChild(createMarketStat(label, data.summary?.[key]));
-  }
 
   await Promise.all([renderSakura(data.tokenAddress), renderChart(data)]);
   rawOutput.innerHTML = syntaxHighlight(data);
@@ -336,22 +321,6 @@ async function resolveDexPairForChart(data) {
   } catch {
     return null;
   }
-}
-
-function createMarketStat(label, value) {
-  const item = document.createElement("article");
-  item.className = "market-stat";
-
-  const title = document.createElement("p");
-  title.className = "token-card-label";
-  title.textContent = label;
-
-  const content = document.createElement("p");
-  content.className = "market-stat-value";
-  content.textContent = formatValue(value);
-
-  item.append(title, content);
-  return item;
 }
 
 function setSocialButton(element, href, label) {
@@ -580,7 +549,6 @@ function resetHomeView() {
   chartStatus.classList.add("hidden");
   chartStatus.textContent = "";
   rawOutput.innerHTML = "";
-  marketGrid.innerHTML = "";
   resetSummaryCards();
   resetSocialButtons();
   resetChartMetrics();

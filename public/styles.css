@@ -1164,9 +1164,10 @@ body:has(#result.hidden) .shell {
 .chart-metric {
   min-height: 80px;
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: 1fr;
   align-items: center;
-  column-gap: 12px;
+  justify-items: center;
+  text-align: center;
   padding: 14px 16px;
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.88);
@@ -1189,6 +1190,8 @@ body:has(#result.hidden) .shell {
 
 .chart-metric-copy {
   min-width: 0;
+  display: grid;
+  justify-items: center;
 }
 
 .chart-metric-value {
