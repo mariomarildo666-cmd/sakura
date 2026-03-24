@@ -57,6 +57,7 @@ The web app currently includes:
 - raw payload inspector
 - recent searches visible to all visitors on the running service
 - X mention bot hooks for `@sakuraonbsc 0x...` style replies
+- X mention launch hooks for `@sakuraonbsc launch name: ... ticker: ...`
 
 ## Stack
 
@@ -86,6 +87,7 @@ Fill `.env` with what you need:
 - `X_API_SECRET`
 - `X_ACCESS_TOKEN`
 - `X_ACCESS_TOKEN_SECRET`
+- optional: `X_BOT_LAUNCH_CONFIG` default is `token.json`
 
 `token.json` is ignored locally so live launch configs stay private.
 
@@ -137,6 +139,13 @@ Run the mention bot loop:
 
 ```bash
 npm run x-bot -- poll
+```
+
+Launch by mention:
+
+```text
+@sakuraonbsc launch name: Siren ticker: SIREN
+@sakuraonbsc bu coini çıkar isim: Siren ticker: SIREN
 ```
 
 Open:

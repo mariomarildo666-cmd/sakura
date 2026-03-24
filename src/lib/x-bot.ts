@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { analyzeWithSakura } from "../agents/sakura.js";
+import { launchTokenFromRequest } from "./fourmeme-launch.js";
 import { lookupCa } from "./ca-lookup.js";
 
 type XBotConfig = {
@@ -48,6 +49,11 @@ type ProcessedMention = {
   replyText: string | null;
   replyTweetId: string | null;
   note: string;
+};
+
+type LaunchCommand = {
+  name: string;
+  shortName: string;
 };
 
 type ProcessMentionsResult = {
@@ -132,6 +138,57 @@ export async function processMentionsOnce() {
     }
 
     const contractAddress = extractContractAddress(mention.text);
+    const launchCommand = parseLaunchCommand(mention.text);
+
+    if (launchCommand) {
+      try {
+        const launch = await launchTokenFromRequest({
+          ...launchCommand,
+          dryRun: config.dryRun,
+        });
+        const replyText = composeLaunchReplyText(launch, mention.author?.username || "anon");
+
+        if (config.dryRun) {
+          processed.add(mention.id);
+          results.push({
+            mentionId: mention.id,
+            authorUsername: mention.author?.username || null,
+            contractAddress: null,
+            status: "drafted",
+            replyText,
+            replyTweetId: null,
+            note: "launch dry run only",
+          });
+          continue;
+        }
+
+        const replyTweetId = await postReply(config, mention.id, replyText);
+        processed.add(mention.id);
+        results.push({
+          mentionId: mention.id,
+          authorUsername: mention.author?.username || null,
+          contractAddress: launch.tokenAddress,
+          status: "replied",
+          replyText,
+          replyTweetId,
+          note: launch.tokenPageUrl ? "launch reply posted" : "launch posted without token page",
+        });
+        continue;
+      } catch (error) {
+        processed.add(mention.id);
+        results.push({
+          mentionId: mention.id,
+          authorUsername: mention.author?.username || null,
+          contractAddress: null,
+          status: "failed",
+          replyText: null,
+          replyTweetId: null,
+          note: error instanceof Error ? error.message : "launch failed",
+        });
+        continue;
+      }
+    }
+
     if (!contractAddress) {
       processed.add(mention.id);
       results.push({
@@ -440,6 +497,72 @@ function normalizeSentence(value: string) {
 function extractContractAddress(text: string) {
   const match = text.match(/0x[a-fA-F0-9]{40}/);
   return match ? match[0] : null;
+}
+
+function parseLaunchCommand(text: string): LaunchCommand | null {
+  const lowered = text.toLowerCase();
+  const hasLaunchVerb =
+    lowered.includes("launch") ||
+    lowered.includes("create") ||
+    lowered.includes("deploy") ||
+    lowered.includes("çıkar") ||
+    lowered.includes("cikar");
+
+  if (!hasLaunchVerb) {
+    return null;
+  }
+
+  const tickerMatch =
+    text.match(/(?:ticker|symbol)\s*[:=-]\s*\$?([A-Za-z0-9]{2,12})/i) ||
+    text.match(/\$([A-Za-z0-9]{2,12})/);
+
+  const nameMatch =
+    text.match(/(?:name|isim)\s*[:=-]\s*["“]?([A-Za-z0-9\u00C0-\u024F\u0400-\u04FF\u0600-\u06FF\u3040-\u30ff\u3400-\u9fff _-]{2,48})["”]?/i) ||
+    text.match(/["“]([^"”]{2,48})["”]/);
+
+  const ticker = tickerMatch?.[1]?.trim().toUpperCase();
+  let name = nameMatch?.[1]?.trim();
+
+  if (!name && ticker) {
+    const between =
+      text.match(/(?:launch|create|deploy|çıkar|cikar)\s+(.+?)(?:\s+(?:ticker|symbol)\s*[:=-]|\s+\$[A-Za-z0-9]{2,12}|$)/i)?.[1]?.trim() ||
+      "";
+    if (between && !between.startsWith("@")) {
+      name = between.replace(/^["“]|["”]$/g, "").trim();
+    }
+  }
+
+  if (!name || !ticker) {
+    return null;
+  }
+
+  name = name.replace(/\s+/g, " ").trim();
+  if (name.length < 2 || name.length > 48) {
+    return null;
+  }
+
+  return {
+    name,
+    shortName: ticker,
+  };
+}
+
+function composeLaunchReplyText(
+  launch: Awaited<ReturnType<typeof launchTokenFromRequest>>,
+  requesterUsername: string,
+) {
+  const lines = [
+    `@${trimUsername(requesterUsername)} Sakura launch ready: ${truncate(launch.name, 28)} ($${launch.shortName})`,
+    launch.tokenPageUrl ? `Four.meme: ${launch.tokenPageUrl}` : `Launch queued. Dry run: ${launch.dryRun ? "yes" : "no"}`,
+  ];
+
+  if (launch.txHash) {
+    lines.push(`TX: https://bscscan.com/tx/${launch.txHash}`);
+  } else if (launch.dryRun) {
+    lines.push("Dry run only. Flip X_BOT_DRY_RUN=false for live launch.");
+  }
+
+  return fitTweet(lines, 280);
 }
 
 function buildOAuthHeader(
