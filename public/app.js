@@ -1,6 +1,7 @@
 const form = document.querySelector("#lookup-form");
 const input = document.querySelector("#ca-input");
 const status = document.querySelector("#status");
+const onboardingShell = document.querySelector("#onboarding-shell");
 const historyShell = document.querySelector("#history-shell");
 const historyList = document.querySelector("#history-list");
 const historyClear = document.querySelector("#history-clear");
@@ -73,6 +74,7 @@ form.addEventListener("submit", async (event) => {
 
   status.textContent = "Looking up token data...";
   input.value = address;
+  onboardingShell?.classList.add("hidden");
   result.classList.remove("hidden");
   heroResult.classList.add("hidden");
   logoShell.classList.add("hidden");
@@ -522,6 +524,7 @@ function initializeHomepage() {
 
   if (initialRoute.kind === "invalid") {
     status.textContent = "Invalid contract address.";
+    onboardingShell?.classList.remove("hidden");
     result.classList.add("hidden");
   }
 }
@@ -544,6 +547,8 @@ function resetHomeView() {
   input.value = "";
   status.textContent = "";
   lastResult = null;
+  onboardingShell?.classList.remove("hidden");
+  historyShell?.classList.add("hidden");
   result.classList.add("hidden");
   heroResult.classList.add("hidden");
   logoShell.classList.add("hidden");
@@ -579,9 +584,20 @@ async function renderRecentSearches(options = {}) {
   if (!recentEntries.length) {
     historyShell.classList.add("hidden");
     historyClear?.classList.add("hidden");
+    if (!lastResult) {
+      onboardingShell?.classList.remove("hidden");
+    }
     return;
   }
 
+  if (!lastResult) {
+    historyShell.classList.add("hidden");
+    historyClear?.classList.add("hidden");
+    onboardingShell?.classList.remove("hidden");
+    return;
+  }
+
+  onboardingShell?.classList.add("hidden");
   historyShell.classList.remove("hidden");
   historyClear?.classList.remove("hidden");
 

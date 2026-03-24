@@ -522,6 +522,95 @@ body:has(#result.hidden) .shell {
   width: auto;
 }
 
+.onboarding-panel {
+  margin: 0 8px 0 64px;
+  padding: 20px 22px;
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  background: linear-gradient(180deg, rgba(255, 253, 253, 0.92), rgba(249, 242, 245, 0.78));
+  box-shadow: var(--shadow-soft);
+}
+
+.onboarding-head {
+  margin-bottom: 16px;
+}
+
+.onboarding-title {
+  margin: 0;
+  color: var(--heading);
+  font-family: var(--display);
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.onboarding-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.onboarding-step {
+  min-height: 112px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid rgba(232, 216, 223, 0.9);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.7);
+  transition:
+    border-color 200ms ease,
+    background 200ms ease,
+    box-shadow 200ms ease;
+}
+
+.onboarding-step:hover {
+  border-color: var(--line-strong);
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.04);
+}
+
+.onboarding-step-icon {
+  width: 38px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  border: 1px solid rgba(232, 216, 223, 0.9);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(246, 239, 242, 0.92));
+  color: var(--heading);
+}
+
+.onboarding-step-icon-svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.onboarding-step-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.onboarding-step-title {
+  margin: 0;
+  color: var(--heading);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.onboarding-step-text {
+  margin: 0;
+  color: var(--body);
+  font-size: 13px;
+  line-height: 1.55;
+  opacity: 0.82;
+}
+
 .hero-history-head {
   margin-bottom: 14px;
   display: flex;
@@ -1492,11 +1581,13 @@ body:has(#result.hidden) .shell {
   }
 
   .hero-history,
+  .onboarding-panel,
   .status {
     margin-left: 0;
     margin-right: 0;
   }
 
+  .onboarding-steps,
   .hero-history-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1583,6 +1674,7 @@ body:has(#result.hidden) .shell {
     max-height: 330px;
   }
 
+  .onboarding-steps,
   .hero-history-list {
     grid-template-columns: 1fr;
   }
