@@ -273,6 +273,8 @@ async function renderChart(data) {
   iframe.loading = "lazy";
   iframe.allowFullscreen = true;
 
+  chartFrame.innerHTML = "";
+
   let loaded = false;
   const timeoutId = window.setTimeout(() => {
     if (loaded) return;
