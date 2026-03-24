@@ -64,8 +64,8 @@ type DraftPayload = {
   verdict: "bullish" | "bearish";
   name: string | null;
   symbol: string | null;
-  reasons: string[];
-  cautions: string[];
+  bullCase: string[];
+  bearCase: string[];
 };
 
 type MentionsResponse = {
@@ -213,8 +213,8 @@ export async function buildSakuraReplyDraft(rawInput: string, requesterUsername 
     verdict: analysis.verdict === "bullish" ? "bullish" : "bearish",
     name: lookup.summary.name,
     symbol: lookup.summary.symbol,
-    reasons: analysis.reasons,
-    cautions: analysis.cautions,
+    bullCase: analysis.bullCase,
+    bearCase: analysis.bearCase,
   } satisfies DraftPayload;
 }
 
@@ -390,8 +390,8 @@ function composeReplyText(
   const name = lookup.summary.name || "Unknown coin";
   const symbol = lookup.summary.symbol ? ` ($${lookup.summary.symbol})` : "";
   const verdict = analysis.verdict === "bullish" ? "BULLISH" : "BEARISH";
-  const reason = analysis.reasons[0] || analysis.cautions[0] || "vibe is still forming";
-  const summary = normalizeSentence(analysis.summary);
+  const reason = analysis.bullCase[0] || analysis.bearCase[0] || "read is still forming";
+  const summary = normalizeSentence(analysis.traderRead[0] || analysis.verdictLine);
   const why = normalizeSentence(reason);
 
   const chunks = [

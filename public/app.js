@@ -170,7 +170,7 @@ async function renderSakura(address) {
   sakuraVerdict.className = "sakura-verdict";
   sakuraVerdict.textContent = "...";
   setSakuraFigure("neutral");
-  renderSakuraSummary("Sakura is scanning the move and checking if this thing has real meme juice or just pretty packaging.");
+  renderSakuraSummary(["Sakura is reading the tape, checking the structure, and deciding if this is actually tradable or just another BSC trap."]);
   fillSakuraList(sakuraReasons, [], "No ape angle yet.");
   fillSakuraList(sakuraCautions, [], "No fade angle yet.");
 
@@ -187,16 +187,16 @@ async function renderSakura(address) {
       throw new Error("Sakura agent returned no analysis.");
     }
 
-    sakuraVerdict.textContent = `${calculateTotalScore(analysis.scorecard)}/10`;
+    sakuraVerdict.textContent = `${analysis.overallScore}/10`;
     sakuraVerdict.classList.add(analysis.verdict === "bullish" ? "is-bullish" : "is-bearish");
     setSakuraFigure(analysis.verdict === "bullish" ? "bullish" : "bearish");
-    renderSakuraSummary(buildMergedSakuraComment(agent.answer || analysis.summary, analysis.reasons, analysis.cautions));
-    fillSakuraList(sakuraReasons, analysis.reasons, "Sakura is not seeing a clean ape case.");
-    fillSakuraList(sakuraCautions, analysis.cautions, "Sakura is not seeing a giant red flag.");
+    renderSakuraSummary([analysis.verdictLine, ...analysis.traderRead, analysis.finalLine]);
+    fillSakuraList(sakuraReasons, analysis.bullCase, "Sakura is not seeing a clean ape case.");
+    fillSakuraList(sakuraCautions, analysis.bearCase, "Sakura is not seeing a giant red flag.");
   } catch (error) {
     sakuraVerdict.textContent = "--";
     setSakuraFigure("neutral");
-    renderSakuraSummary(error instanceof Error ? error.message : "Sakura analysis failed.");
+    renderSakuraSummary([error instanceof Error ? error.message : "Sakura analysis failed."]);
     fillSakuraList(sakuraReasons, [], "No analysis points available.");
     fillSakuraList(sakuraCautions, [], "No caution points available.");
   }
@@ -338,36 +338,15 @@ function formatCompactMoney(value) {
   }).format(number);
 }
 
-function calculateTotalScore(scorecard) {
-  const name = mapMiniScoreToTen(scorecard?.nameVibe ?? 0);
-  const social = mapMiniScoreToTen(scorecard?.socialHeat ?? 0);
-  const chart = mapMiniScoreToTen(scorecard?.chartHeat ?? 0);
-  const danger = 10 - mapMiniScoreToTen(scorecard?.danger ?? 0);
-  return Math.max(0, Math.min(10, Math.round((name + social + chart + danger) / 4)));
-}
-
-function mapMiniScoreToTen(value) {
-  const number = Number(value);
-  const clamped = Number.isFinite(number) ? Math.max(-2, Math.min(2, number)) : 0;
-  return Math.round(((clamped + 2) / 4) * 10);
-}
-
-function buildMergedSakuraComment(base, reasons, cautions) {
-  const ape = Array.isArray(reasons) && reasons.length ? reasons.slice(0, 2).join(". ") : "I still do not see a clean ape angle";
-  const fade = Array.isArray(cautions) && cautions.length ? cautions.slice(0, 2).join(". ") : "there is no giant red flag yet";
-  return `${base} Ape angle: ${ape}. Fade angle: ${fade}.`;
-}
-
-function renderSakuraSummary(text) {
+function renderSakuraSummary(paragraphs) {
   sakuraSummary.innerHTML = "";
-  const chunks = String(text || "")
-    .match(/[^.!?]+[.!?]?/g)
-    ?.map((item) => item.trim())
-    .filter(Boolean) || ["-"];
+  const items = Array.isArray(paragraphs)
+    ? paragraphs.map((item) => String(item || "").trim()).filter(Boolean)
+    : [String(paragraphs || "-").trim()].filter(Boolean);
 
-  for (let i = 0; i < chunks.length; i += 2) {
+  for (const chunk of items.length ? items : ["-"]) {
     const paragraph = document.createElement("p");
-    paragraph.textContent = [chunks[i], chunks[i + 1]].filter(Boolean).join(" ");
+    paragraph.textContent = chunk;
     sakuraSummary.appendChild(paragraph);
   }
 }

@@ -83,26 +83,26 @@ function buildAgentAnswer(
 ) {
   const name = lookup.summary.name || "Unknown coin";
   const ticker = lookup.summary.symbol ? `$${lookup.summary.symbol}` : "no ticker";
-  const primaryReason = analysis.reasons[0] || "no clean reason";
-  const primaryCaution = analysis.cautions[0] || "no strong warning";
+  const primaryBull = analysis.bullCase[0] || "no clean bull case";
+  const primaryBear = analysis.bearCase[0] || "no strong bear case";
   const nameLine = `${name} / ${ticker}`;
 
   switch (mode) {
     case "warn":
-      return `Sakura warning pass on ${nameLine}: not gonna lie, this one smells shaky. Biggest red flag is ${primaryCaution}. If you ape this blind and it turns into chop, that's on you.`;
+      return `VERDICT: ${analysis.verdictLine}\n\nTRADER READ:\n${analysis.traderRead.join("\n\n")}\n\nBULL CASE:\n- ${analysis.bullCase.join("\n- ")}\n\nBEAR CASE:\n- ${analysis.bearCase.join("\n- ")}\n\nSCORES:\n- Launch Quality: ${analysis.scores.launchQuality}/10\n- Meme Strength: ${analysis.scores.memeStrength}/10\n- Tradeability: ${analysis.scores.tradeability}/10\n- Exit Liquidity Risk: ${analysis.scores.exitLiquidityRisk}/10\n- Rotation Potential: ${analysis.scores.rotationPotential}/10\n\nFINAL LINE:\n${analysis.finalLine}`;
     case "tweet":
       return tweetDraft
-        ? `Tweet mode is live for ${nameLine}. Sakura cooked a ${analysis.verdict} post around ${primaryReason}. Good enough to farm the timeline a bit.`
+        ? `Tweet mode is live for ${nameLine}. Draft leans on ${primaryBull}. Main risk is ${primaryBear}.`
         : `Tweet draft unavailable for ${name}.`;
     case "reply":
       return tweetDraft
-        ? `Reply mode ready for ${nameLine}. Sakura built a ${analysis.verdict} clapback around ${primaryReason}. Clean enough for a fast mention reply.`
+        ? `Reply mode ready for ${nameLine}. Draft opens off ${analysis.verdictLine} and leans on ${primaryBull}.`
         : `Reply mode unavailable for ${name}.`;
     case "read":
     default:
       return question
-        ? `Sakura read for "${question}": ${analysis.summary} The only part making me look twice is ${primaryReason}. The part making me roll my eyes is ${primaryCaution}.`
-        : `${analysis.summary} The only part making me look twice is ${primaryReason}. The part making me roll my eyes is ${primaryCaution}.`;
+        ? `Sakura read for "${question}": ${analysis.verdictLine} ${analysis.traderRead.join(" ")} Final read: ${analysis.finalLine}`
+        : `VERDICT: ${analysis.verdictLine}\n\nTRADER READ:\n${analysis.traderRead.join("\n\n")}\n\nBULL CASE:\n- ${analysis.bullCase.join("\n- ")}\n\nBEAR CASE:\n- ${analysis.bearCase.join("\n- ")}\n\nSCORES:\n- Launch Quality: ${analysis.scores.launchQuality}/10\n- Meme Strength: ${analysis.scores.memeStrength}/10\n- Tradeability: ${analysis.scores.tradeability}/10\n- Exit Liquidity Risk: ${analysis.scores.exitLiquidityRisk}/10\n- Rotation Potential: ${analysis.scores.rotationPotential}/10\n\nFINAL LINE:\n${analysis.finalLine}`;
   }
 }
 
